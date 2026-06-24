@@ -69,6 +69,15 @@ def flip_image_and_boxes(image, boxes):
         new_boxes.append((cls_id, 1.0 - x_c, y_c, box_w, box_h))
     return flipped_image, new_boxes
 
+def add_gaussian_noise(image, mean=0, sigma=15):
+    noise = np.random.normal(mean, sigma, image.shape).astype(np.int16)
+    noisy_image = np.clip(image.astype(np.int16) + noise, 0, 255).astype(np.uint8)
+    return noisy_image
+
+def apply_gaussian_blur(image, kernel_size=(5, 5)):
+    return cv2.GaussianBlur(image, kernel_size, 0)
+
+
 def load_yolo_labels(label_path):
     boxes = []
     if os.path.exists(label_path):
@@ -91,7 +100,7 @@ def main():
     
     # We want to search for original images first (skip already augmented ones)
     image_paths = glob.glob(os.path.join(IMAGES_DIR, "*.jpg"))
-    original_images = [p for p in image_paths if not any(x in os.path.basename(p) for x in ["_rot_", "_flip_", "_bright_", "_dark_"])]
+    original_images = [p for p in image_paths if not any(x in os.path.basename(p) for x in ["_rot_", "_flip_", "_bright_", "_dark_", "_noise_", "_blur_"])]
     
     print(f"[INFO] Found {len(original_images)} original images.")
     
@@ -139,6 +148,27 @@ def main():
                 aug_img = cv2.convertScaleAbs(image, alpha=1.0, beta=val)
                 cv2.imwrite(bright_img_path, aug_img)
                 save_yolo_labels(bright_lbl_path, boxes) # boxes remain same
+                total_generated += 1
+
+        # 4. Apply Gaussian Noise (2 versions: sigma=15, sigma=25)
+        for sigma in [15, 25]:
+            noise_img_path = os.path.join(IMAGES_DIR, f"{base_name}_noise_{sigma}.jpg")
+            noise_lbl_path = os.path.join(LABELS_DIR, f"{base_name}_noise_{sigma}.txt")
+            if not os.path.exists(noise_img_path):
+                noise_img = add_gaussian_noise(image, sigma=sigma)
+                cv2.imwrite(noise_img_path, noise_img)
+                save_yolo_labels(noise_lbl_path, boxes)
+                total_generated += 1
+
+        # 5. Apply Gaussian Blur (2 versions: 3x3, 5x5)
+        for ksize in [(3, 3), (5, 5)]:
+            suffix = f"_blur_{ksize[0]}x{ksize[1]}"
+            blur_img_path = os.path.join(IMAGES_DIR, f"{base_name}{suffix}.jpg")
+            blur_lbl_path = os.path.join(LABELS_DIR, f"{base_name}{suffix}.txt")
+            if not os.path.exists(blur_img_path):
+                blur_img = apply_gaussian_blur(image, kernel_size=ksize)
+                cv2.imwrite(blur_img_path, blur_img)
+                save_yolo_labels(blur_lbl_path, boxes)
                 total_generated += 1
                 
     # Final count check
