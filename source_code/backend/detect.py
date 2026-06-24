@@ -1,32 +1,39 @@
-import cv2
 import os
-from ultralytics import YOLO
-import sqlite3
+
+import cv2
 from datetime import datetime
+from ultralytics import YOLO
 import easyocr
 import re
+import sqlite3
 
 # ============ CONFIG ============
 # Use absolute path based on this script's location so it works when run directly
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(_SCRIPT_DIR, '..', '..', 'trained_models', 'best.pt')
-DEFAULT_DB_PATH = os.path.join(_SCRIPT_DIR, 'bnu_vehicles.db')
+MODEL_PATH = os.path.join(_SCRIPT_DIR, "..", "..", "trained_models", "best.pt")
+DEFAULT_DB_PATH = os.path.join(_SCRIPT_DIR, "bnu_vehicles.db")
 CONFIDENCE = 0.5
-TEST_IMAGE = os.path.join(_SCRIPT_DIR, 'test_image.jpg')
+TEST_IMAGE = os.path.join(_SCRIPT_DIR, "test_image.jpg")
 DEFAULT_TIMEOUT_MS = 10000
 
-# ============ INIT ============
-print(f"[INFO] Loading model from: {MODEL_PATH}")
-model = YOLO(MODEL_PATH)
-reader = easyocr.Reader(['en'], gpu=False)
-print("[INFO] Model and OCR ready.")
+
+def _load_model(path):
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Model weights not found: {path}")
+    return YOLO(path)
+
+
+model = _load_model(MODEL_PATH)
+reader = easyocr.Reader(["en"], gpu=False)
+
 
 # ============ DATABASE ============
 def init_db():
     try:
-        with sqlite3.connect(DB_PATH) as conn:
+        with sqlite3.connect(DEFAULT_DB_PATH) as conn:
             cursor = conn.cursor()
-            cursor.execute('''
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS vehicle_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     plate_number TEXT,
@@ -36,50 +43,60 @@ def init_db():
                     date TEXT,
                     time TEXT
                 )
-            ''')
+                """
+            )
             conn.commit()
     except sqlite3.Error as e:
         print(f"[ERROR] Database initialization failed: {e}")
 
+
 def log_vehicle(plate, bnu, conf):
     try:
-        with sqlite3.connect(DB_PATH) as conn:
+        with sqlite3.connect(DEFAULT_DB_PATH) as conn:
             cursor = conn.cursor()
             now = datetime.now()
-            cursor.execute('''
+            cursor.execute(
+                """
                 INSERT INTO vehicle_logs
                 (plate_number, bnu_sticker_detected, confidence, timestamp, date, time)
                 VALUES (?, ?, ?, ?, ?, ?)
-            ''', (plate, 1 if bnu else 0, conf,
-                  now.strftime('%Y-%m-%d %H:%M:%S'),
-                  now.strftime('%Y-%m-%d'),
-                  now.strftime('%H:%M:%S')))
+                """,
+                (
+                    plate,
+                    1 if bnu else 0,
+                    conf,
+                    now.strftime("%Y-%m-%d %H:%M:%S"),
+                    now.strftime("%Y-%m-%d"),
+                    now.strftime("%H:%M:%S"),
+                ),
+            )
             conn.commit()
     except sqlite3.Error as e:
         print(f"[ERROR] Failed to log vehicle entry: {e}")
 
+
 def clean_plate_text(text):
     if not text:
-        return 'NOT DETECTED'
-    # Remove special characters, punctuation, and extra whitespace
-    cleaned = re.sub(r'[^A-Z0-9\s-]', '', text.upper())
-    # Strip leading/trailing whitespaces and collapse multiple spaces into a single space
-    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        return "NOT DETECTED"
+    cleaned = re.sub(r"[^A-Z0-9\s-]", "", text.upper())
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
     if not cleaned:
-        return 'NOT DETECTED'
+        return "NOT DETECTED"
     return cleaned
 
+
 # ============ DETECTION ============
-def detect(image_path, confidence=CONFIDENCE, timeout=10000):
+def detect(image_path, confidence=CONFIDENCE, timeout_ms=DEFAULT_TIMEOUT_MS, show_window=True):
     image = cv2.imread(image_path)
     if image is None:
         raise FileNotFoundError(f"Could not read image at: {image_path}")
 
-    results = model(image, conf=confidence)[0]
+    results = model(image, conf=float(confidence), verbose=False)[0]
 
-    plate_text = 'NOT DETECTED'
+    plate_text = "NOT DETECTED"
     bnu_sticker = False
     plate_conf = 0.0
+    sticker_conf = 0.0
     max_conf = 0.0
 
     for box in results.boxes:
@@ -92,8 +109,7 @@ def detect(image_path, confidence=CONFIDENCE, timeout=10000):
         if conf > max_conf:
             max_conf = conf
 
-        if label == 'number_plate':
-            # Crop plate region for OCR
+        if label == "number_plate":
             cropped = image[y1:y2, x1:x2]
             if cropped.size > 0:
                 try:
@@ -101,43 +117,51 @@ def detect(image_path, confidence=CONFIDENCE, timeout=10000):
                 except Exception:
                     ocr_result = []
                 if ocr_result:
-                    raw_text = ' '.join(ocr_result)
+                    raw_text = " ".join(ocr_result)
                     plate_text = clean_plate_text(raw_text)
                     plate_conf = conf
 
-        elif label == 'bnu_sticker':
-            if conf >= CONFIDENCE:
+        elif label == "bnu_sticker":
+            sticker_conf = conf
+            if conf >= confidence:
                 bnu_sticker = True
 
-        color = (0, 255, 0) if label == 'bnu_sticker' else (255, 165, 0)
+        color = (0, 255, 0) if label == "bnu_sticker" else (255, 165, 0)
         cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
-        
-        # Bounding box label tag background block
-        txt = f'{label} {conf:.2f}'
-        (txt_w, txt_h), _ = cv2.getTextSize(txt, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-        # Handle label position near image edges
-        label_y = max(y1, txt_h + 10)
-        cv2.rectangle(image, (x1, label_y - txt_h - 10), (x1 + txt_w + 10, label_y), color, -1)
-        cv2.putText(image, txt, (x1 + 5, label_y - 5),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0) if label == 'bnu_sticker' else (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(
+            image,
+            f"{label} {conf:.2f}",
+            (x1, y1 - 10),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            color,
+            2,
+        )
 
-    # Use highest detected confidence, fallback to plate_conf, then 0
     final_conf = max_conf if max_conf > 0 else plate_conf
 
-    # Status overlay
-    status = 'BNU VEHICLE - ALLOW' if bnu_sticker else 'NOT BNU - DENY'
+    status = "BNU VEHICLE - ALLOW" if bnu_sticker else "NOT BNU - DENY"
     color = (0, 255, 0) if bnu_sticker else (0, 0, 255)
-    
-    # Draw background box for text readability
-    (tw, th), baseline = cv2.getTextSize(status, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
-    cv2.rectangle(image, (10, 10), (10 + tw + 20, 10 + th + 20), (0, 0, 0), -1)
-    cv2.putText(image, status, (20, 15 + th),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2, cv2.LINE_AA)
+    cv2.putText(
+        image,
+        status,
+        (10, 40),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1.2,
+        color,
+        3,
+    )
 
-    # Timestamp
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    cv2.putText(image, timestamp, (10, image.shape[0] - 10),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cv2.putText(
+        image,
+        timestamp,
+        (10, image.shape[0] - 10),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        (255, 255, 255),
+        2,
+    )
 
     log_vehicle(plate_text, bnu_sticker, final_conf)
 
@@ -147,20 +171,51 @@ def detect(image_path, confidence=CONFIDENCE, timeout=10000):
     print(f"Confidence : {final_conf:.2f}")
     print(f"Time       : {timestamp}")
 
-    cv2.namedWindow('BNU Detection', cv2.WINDOW_NORMAL)
-    cv2.imshow('BNU Detection', image)
-    print(f"[INFO] OpenCV window opened. Press any key on the image window to close it, or it will close automatically in {timeout/1000:.0f} seconds...")
-    cv2.waitKey(timeout)
-    cv2.destroyAllWindows()
+    if show_window:
+        cv2.imshow("BNU Detection", image)
+        print(
+            f"[INFO] Press any key in the image window to close, or it will close automatically in {int(timeout_ms/1000)}s..."
+        )
+        cv2.waitKey(int(timeout_ms))
+        cv2.destroyAllWindows()
+
+    try:
+        cv2.imwrite("last_detection.jpg", image)
+        print("[INFO] Saved annotated frame to last_detection.jpg")
+    except Exception:
+        pass
+
+    return {
+        "plate_number": plate_text,
+        "bnu_sticker_detected": bnu_sticker,
+        "confidence": final_conf,
+        "timestamp": timestamp,
+        "sticker_confidence": sticker_conf,
+        "plate_confidence": plate_conf,
+    }
+
 
 # ============ MAIN ============
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description="BNU Vehicle Detection & Logging Pipeline")
-    parser.add_argument('--image', type=str, default=TEST_IMAGE, help='Path to input image')
-    parser.add_argument('--conf', type=float, default=CONFIDENCE, help='Confidence threshold')
-    parser.add_argument('--timeout', type=int, default=10000, help='OpenCV window timeout in ms')
+    parser.add_argument("--image", type=str, default=TEST_IMAGE, help="Path to input image")
+    parser.add_argument("--conf", type=float, default=CONFIDENCE, help="Confidence threshold")
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=DEFAULT_TIMEOUT_MS,
+        help="OpenCV window timeout in ms",
+    )
+    parser.add_argument("--no-window", action="store_true", help="Run without opening OpenCV window")
     args = parser.parse_args()
 
     init_db()
-    detect(args.image, confidence=args.conf, timeout=args.timeout)
+    result = detect(
+        args.image,
+        confidence=args.conf,
+        timeout_ms=args.timeout,
+        show_window=not args.no_window,
+    )
+    print(f"[RESULT] {result}")
