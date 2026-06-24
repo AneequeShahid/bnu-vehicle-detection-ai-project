@@ -1,7 +1,10 @@
 import os
 import uvicorn
-from fastapi import FastAPI
+import base64
+import shutil
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
+from detect import detect
 
 import sqlite3
 from datetime import datetime
@@ -108,7 +111,36 @@ def get_logs(filter_type: str = "all"):
     except sqlite3.Error as e:
         return {"error": f"Database error: {e}"}
 
-if __name__ == "__main__":
+@app.post("/api/detect")
+async def run_detection(file: UploadFile = File(...), conf: float = Form(0.5)):
+    temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp")
+    os.makedirs(temp_dir, exist_ok=True)
+    temp_path = os.path.join(temp_dir, file.filename)
+    
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        result = detect(temp_path, confidence=conf, show_window=False)
+        
+        annotated_path = "last_detection.jpg"
+        img_base64 = ""
+        if os.path.exists(annotated_path):
+            with open(annotated_path, "rb") as image_file:
+                img_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+                
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+            
+        return {
+            "success": True,
+            "result": result,
+            "image": f"data:image/jpeg;base64,{img_base64}"
+        }
+    except Exception as e:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        return {"success": False, "error": str(e)}
 
-    # Start the server on port 8000
+if __name__ == "__main__":
     uvicorn.run("server:app", host="127.0.0.1", port=8000, reload=True)
