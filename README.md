@@ -1,59 +1,38 @@
-# 🚗 BNU Vehicle Detection & Logging System — Final Submission
+# 🚗 BNU Vehicle Detection & Logging System
 
-This folder contains the complete submission package for the **BNU Vehicle Detection & Logging System** project, consolidated and optimized from the source repository and local presentation materials.
+BNU Gate Monitoring is an automated vehicle inspection system built with computer vision. It detects BNU registration stickers and license plates, recognizes plate text with OCR, logs access events in SQLite, and provides a web dashboard for gate supervisors.
 
----
+- Stack: YOLOv8 Nano, EasyOCR, OpenCV, SQLite, HTML/CSS/JS
+- Model: custom-trained `best.pt`
+- Dataset: 1,044 images (87 original images augmented with rotations, flips, and brightness adjustments)
+- License: student project submission for academic evaluation
 
-## 📋 Submission Checklist & File Mapping
+## Project structure
 
-Here is the mapping of the required project items to the actual files in this submission folder:
+- `Final_Project_Report.md` — full technical report
+- `AI_Presentation.pdf` — project presentation
+- `source_code/` — backend detector and frontend dashboard
+- `trained_models/` — trained YOLOv8 weights
+- `dataset/` — dataset export from Roboflow
+- `results/` — validation plots and confusion matrix
+- `ui_demo/` — standalone interactive demo
 
-| Required Deliverable | Description | File / Folder Link |
-| :--- | :--- | :--- |
-| **Final Project Report** | Comprehensive technical documentation detailing architecture, dataset, training, and metrics | [Final_Project_Report.md](file:///C:/Users/Aneeque/Downloads/BNU_Vehicle_Detection_Submission/BNU_Vehicle_Detection_Submission/Final_Project_Report.md) |
-| **Presentation Slides** | High-quality project slides detailing system design and results | [AI_Presentation.pdf](file:///C:/Users/Aneeque/Downloads/BNU_Vehicle_Detection_Submission/BNU_Vehicle_Detection_Submission/AI_Presentation.pdf) |
-| **Source Code & Project Files** | Consolidating the backend model detection and frontend dashboard templates | [source_code/](file:///C:/Users/Aneeque/Downloads/BNU_Vehicle_Detection_Submission/BNU_Vehicle_Detection_Submission/source_code) |
-| **Dataset(s) used in the project** | Annotated BNU vehicles dataset in YOLOv8 layout zip | [dataset/bnu-vehicle-detector.v1i.yolov8.zip](file:///C:/Users/Aneeque/Downloads/BNU_Vehicle_Detection_Submission/BNU_Vehicle_Detection_Submission/dataset/bnu-vehicle-detector.v1i.yolov8.zip) |
-| **Trained Models** | custom-trained YOLOv8 weights (`best.pt` file) | [trained_models/best.pt](file:///C:/Users/Aneeque/Downloads/BNU_Vehicle_Detection_Submission/BNU_Vehicle_Detection_Submission/trained_models/best.pt) |
-| **Confusion Matrix** | Performance confusion matrix plot generated during validation runs | [results/confusion_matrix.png](file:///C:/Users/Aneeque/Downloads/BNU_Vehicle_Detection_Submission/BNU_Vehicle_Detection_Submission/results/confusion_matrix.png) |
-| **User Interface / Demo App** | High-fidelity interactive web simulator & original gate supervisor dashboard | [ui_demo/](file:///C:/Users/Aneeque/Downloads/BNU_Vehicle_Detection_Submission/BNU_Vehicle_Detection_Submission/ui_demo) |
-| **Supporting Materials / Results** | Validation loss curves, training stats, and complete zipped run logs | [results/](file:///C:/Users/Aneeque/Downloads/BNU_Vehicle_Detection_Submission/BNU_Vehicle_Detection_Submission/results) |
+## Run the backend
 
----
-
-## 🔗 Primary Resource Links
-
-For reference, the primary online resource links are included below:
-* **Original GitHub Repository:** [samin2799-hash/bnu-vehicle-detection](https://github.com/samin2799-hash/bnu-vehicle-detection)
-* **Trained Model Weights (best.pt):** [Download best.pt (6.2 MB)](https://github.com/samin2799-hash/bnu-vehicle-detection/raw/main/best.pt)
-* **Annotated Roboflow Dataset Zip:** [Download bnu-vehicle-detector.v1i.yolov8.zip](https://github.com/samin2799-hash/bnu-vehicle-detection/raw/main/bnu-vehicle-detector.v1i.yolov8.zip)
-
----
-
-## 🛠️ Summary of Missing Deliverables Generated
-
-The original GitHub repository lacked several core materials required for the final project submission. These have been generated and integrated:
-1. **Final Project Report (`Final_Project_Report.md`):** Generated from scratch. Details project specifications, deep learning hyperparameters, validation graphs, SQLite DB schemas, and gate decision logic.
-2. **Interactive Demo Web App (`ui_demo/index.html`):** Developed a premium web application simulating the gate camera feed. Users can select vehicles, watch a scan line animation, view dynamic YOLO bounding boxes, read license plates (EasyOCR simulation), write entries to an SQLite table, and view statistical counters in real-time.
-3. **Slides Organization (`AI_Presentation.pdf`):** Relocated your local PDF presentation to the root folder for streamlined presentation grading.
-
----
-
-## 🚀 Execution & Quick Start Instructions
-
-### 📊 1. Run the Interactive Web Demo Simulator
-- Locate and open [ui_demo/index.html](file:///C:/Users/Aneeque/Downloads/BNU_Vehicle_Detection_Submission/BNU_Vehicle_Detection_Submission/ui_demo/index.html) in any modern web browser.
-- Select a vehicle from the right panel to trigger the gate entrance simulator.
-- View real-time statistics, OCR plate readings, access decisions, and scrollable log lists.
-
-### 💻 2. Run the Python Backend Pipeline
-Ensure Python 3.8+ is installed with the required libraries:
-```bash
-pip install ultralytics easyocr opencv-python sqlite3 datetime
-```
-Run the local gate verification script:
-```bash
+```shell
 cd source_code/backend
-python detect.py
+python detect.py --image path/to/image.jpg
 ```
-This script runs the customized YOLOv8 model and EasyOCR text extraction, displays the annotated bounding boxes, and records access logs to the `bnu_vehicles.db` SQLite database.
+
+Drop a vehicle image into `source_code/backend/` or pass any image path. A debug OpenCV window opens, the annotated frame is saved as `last_detection.jpg`, and a JSON-style result dict is printed to the terminal. Use `--no-window` for headless inference.
+
+## Dependencies
+
+```shell
+pip install ultralytics opencv-python easyocr sqlite3
+```
+
+## Submission package
+
+This repository is a consolidated submission package. Original source: `samin2799-hash/bnu-vehicle-detection`.
+© BNU Lahore, BS Computer Science, Session 2026
