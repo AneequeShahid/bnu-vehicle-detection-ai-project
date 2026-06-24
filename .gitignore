@@ -17,3 +17,7 @@ bnu_vehicles.db-journal
 .idea/
 .DS_Store
 Thumbs.db
+
+# Temp test files
+last_detection.jpg
+
