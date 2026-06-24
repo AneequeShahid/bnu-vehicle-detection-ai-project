@@ -50,14 +50,14 @@ def log_vehicle(conn, cursor, plate, bnu, conf):
     conn.commit()
 
 # ============ DETECTION ============
-def detect(image_path):
+def detect(image_path, confidence=CONFIDENCE, timeout=10000):
     conn, cursor = init_db()
 
     image = cv2.imread(image_path)
     if image is None:
         raise FileNotFoundError(f"Could not read image at: {image_path}")
 
-    results = model(image, conf=CONFIDENCE)[0]
+    results = model(image, conf=confidence)[0]
 
     plate_text = 'NOT DETECTED'
     bnu_sticker = False
@@ -118,14 +118,20 @@ def detect(image_path):
     print(f"Time       : {timestamp}")
 
     cv2.imshow('BNU Detection', image)
-    print("[INFO] OpenCV window opened. Press any key on the image window to close it, or it will close automatically in 10 seconds...")
-    cv2.waitKey(10000)
+    print(f"[INFO] OpenCV window opened. Press any key on the image window to close it, or it will close automatically in {timeout/1000:.0f} seconds...")
+    cv2.waitKey(timeout)
     cv2.destroyAllWindows()
 
     conn.close()
 
 # ============ MAIN ============
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(description="BNU Vehicle Detection & Logging Pipeline")
+    parser.add_argument('--image', type=str, default=TEST_IMAGE, help='Path to input image')
+    parser.add_argument('--conf', type=float, default=CONFIDENCE, help='Confidence threshold')
+    parser.add_argument('--timeout', type=int, default=10000, help='OpenCV window timeout in ms')
+    args = parser.parse_args()
+
     init_db()
-    # Test image
-    detect(TEST_IMAGE)
+    detect(args.image, confidence=args.conf, timeout=args.timeout)
