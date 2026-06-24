@@ -22,33 +22,40 @@ print("[INFO] Model and OCR ready.")
 
 # ============ DATABASE ============
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS vehicle_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            plate_number TEXT,
-            bnu_sticker_detected INTEGER,
-            confidence REAL,
-            timestamp TEXT,
-            date TEXT,
-            time TEXT
-        )
-    ''')
-    conn.commit()
-    return conn, cursor
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS vehicle_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    plate_number TEXT,
+                    bnu_sticker_detected INTEGER,
+                    confidence REAL,
+                    timestamp TEXT,
+                    date TEXT,
+                    time TEXT
+                )
+            ''')
+            conn.commit()
+    except sqlite3.Error as e:
+        print(f"[ERROR] Database initialization failed: {e}")
 
-def log_vehicle(conn, cursor, plate, bnu, conf):
-    now = datetime.now()
-    cursor.execute('''
-        INSERT INTO vehicle_logs
-        (plate_number, bnu_sticker_detected, confidence, timestamp, date, time)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (plate, 1 if bnu else 0, conf,
-          now.strftime('%Y-%m-%d %H:%M:%S'),
-          now.strftime('%Y-%m-%d'),
-          now.strftime('%H:%M:%S')))
-    conn.commit()
+def log_vehicle(plate, bnu, conf):
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            now = datetime.now()
+            cursor.execute('''
+                INSERT INTO vehicle_logs
+                (plate_number, bnu_sticker_detected, confidence, timestamp, date, time)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (plate, 1 if bnu else 0, conf,
+                  now.strftime('%Y-%m-%d %H:%M:%S'),
+                  now.strftime('%Y-%m-%d'),
+                  now.strftime('%H:%M:%S')))
+            conn.commit()
+    except sqlite3.Error as e:
+        print(f"[ERROR] Failed to log vehicle entry: {e}")
 
 def clean_plate_text(text):
     if not text:
@@ -63,8 +70,6 @@ def clean_plate_text(text):
 
 # ============ DETECTION ============
 def detect(image_path, confidence=CONFIDENCE, timeout=10000):
-    conn, cursor = init_db()
-
     image = cv2.imread(image_path)
     if image is None:
         raise FileNotFoundError(f"Could not read image at: {image_path}")
@@ -122,7 +127,7 @@ def detect(image_path, confidence=CONFIDENCE, timeout=10000):
     cv2.putText(image, timestamp, (10, image.shape[0] - 10),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
-    log_vehicle(conn, cursor, plate_text, bnu_sticker, final_conf)
+    log_vehicle(plate_text, bnu_sticker, final_conf)
 
     print(f"Image      : {image_path}")
     print(f"Plate      : {plate_text}")
@@ -134,8 +139,6 @@ def detect(image_path, confidence=CONFIDENCE, timeout=10000):
     print(f"[INFO] OpenCV window opened. Press any key on the image window to close it, or it will close automatically in {timeout/1000:.0f} seconds...")
     cv2.waitKey(timeout)
     cv2.destroyAllWindows()
-
-    conn.close()
 
 # ============ MAIN ============
 if __name__ == '__main__':
