@@ -45,6 +45,8 @@ def init_db():
                 )
                 """
             )
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON vehicle_logs(timestamp)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bnu ON vehicle_logs(bnu_sticker_detected)")
             conn.commit()
     except sqlite3.Error as e:
         print(f"[ERROR] Database initialization failed: {e}")
