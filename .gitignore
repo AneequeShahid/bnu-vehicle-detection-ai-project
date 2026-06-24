@@ -1,0 +1,19 @@
+# Python temporary files
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env
+
+# Project specific exclusions
+dataset/extracted/
+bnu_vehicles.db
+bnu_vehicles.db-journal
+
+# IDEs and System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
