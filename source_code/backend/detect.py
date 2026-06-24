@@ -10,9 +10,10 @@ import re
 # Use absolute path based on this script's location so it works when run directly
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(_SCRIPT_DIR, '..', '..', 'trained_models', 'best.pt')
-DB_PATH = os.path.join(_SCRIPT_DIR, 'bnu_vehicles.db')
+DEFAULT_DB_PATH = os.path.join(_SCRIPT_DIR, 'bnu_vehicles.db')
 CONFIDENCE = 0.5
 TEST_IMAGE = os.path.join(_SCRIPT_DIR, 'test_image.jpg')
+DEFAULT_TIMEOUT_MS = 10000
 
 # ============ INIT ============
 print(f"[INFO] Loading model from: {MODEL_PATH}")
@@ -110,8 +111,15 @@ def detect(image_path, confidence=CONFIDENCE, timeout=10000):
 
         color = (0, 255, 0) if label == 'bnu_sticker' else (255, 165, 0)
         cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
-        cv2.putText(image, f'{label} {conf:.2f}',
-                    (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+        
+        # Bounding box label tag background block
+        txt = f'{label} {conf:.2f}'
+        (txt_w, txt_h), _ = cv2.getTextSize(txt, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        # Handle label position near image edges
+        label_y = max(y1, txt_h + 10)
+        cv2.rectangle(image, (x1, label_y - txt_h - 10), (x1 + txt_w + 10, label_y), color, -1)
+        cv2.putText(image, txt, (x1 + 5, label_y - 5),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0) if label == 'bnu_sticker' else (255, 255, 255), 1, cv2.LINE_AA)
 
     # Use highest detected confidence, fallback to plate_conf, then 0
     final_conf = max_conf if max_conf > 0 else plate_conf
@@ -119,8 +127,12 @@ def detect(image_path, confidence=CONFIDENCE, timeout=10000):
     # Status overlay
     status = 'BNU VEHICLE - ALLOW' if bnu_sticker else 'NOT BNU - DENY'
     color = (0, 255, 0) if bnu_sticker else (0, 0, 255)
-    cv2.putText(image, status, (10, 40),
-                cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
+    
+    # Draw background box for text readability
+    (tw, th), baseline = cv2.getTextSize(status, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+    cv2.rectangle(image, (10, 10), (10 + tw + 20, 10 + th + 20), (0, 0, 0), -1)
+    cv2.putText(image, status, (20, 15 + th),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2, cv2.LINE_AA)
 
     # Timestamp
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -135,6 +147,7 @@ def detect(image_path, confidence=CONFIDENCE, timeout=10000):
     print(f"Confidence : {final_conf:.2f}")
     print(f"Time       : {timestamp}")
 
+    cv2.namedWindow('BNU Detection', cv2.WINDOW_NORMAL)
     cv2.imshow('BNU Detection', image)
     print(f"[INFO] OpenCV window opened. Press any key on the image window to close it, or it will close automatically in {timeout/1000:.0f} seconds...")
     cv2.waitKey(timeout)
