@@ -1216,9 +1216,18 @@
       btn.classList.add('active');
     }
 
-    // Init values
+    // Init & keyboard shortcuts
     refreshStats();
     renderTable();
-  </script>
+    window.addEventListener('keydown', (event) => {
+      if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+        return;
+      }
+      const digit = parseInt(event.key, 10);
+      if (Number.isInteger(digit) && digit >= 1 && digit <= 4) {
+        selectVehicle(digit - 1);
+      }
+    });
+</script>
 </body>
 </html>
