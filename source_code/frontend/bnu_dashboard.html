@@ -682,9 +682,12 @@
     <!-- Camera -->
     <div class="camera-feed" id="cameraFeed">
       <div class="camera-grid"></div>
-      <div class="scan-line"></div>
+      <div class="scan-line" id="scanLine" style="display:none"></div>
 
-      <!-- Detection boxes -->
+      <!-- Live Preview / Result Frame -->
+      <img id="cameraImage" style="display:none; width:100%; height:100%; object-fit:contain; z-index:1; position:relative;" />
+
+      <!-- Detection boxes (used in simulated mode) -->
       <div class="detection-box plate" id="plateBox" style="display:none">number_plate 0.91</div>
       <div class="detection-box sticker" id="stickerBox" style="display:none">bnu_sticker 0.87</div>
 
@@ -697,11 +700,14 @@
 
       <div class="camera-placeholder" id="cameraPlaceholder">
         <div class="camera-icon">📷</div>
-        <p>Connect camera or click Simulate Detection</p>
-        <button class="btn btn-primary" onclick="simulateDetection()">▶ Start Demo</button>
+        <p>Upload a vehicle image to scan & log</p>
+        <label class="btn btn-primary" style="display: inline-block; cursor: pointer; padding: 10px 20px;">
+          📂 Select Image File
+          <input type="file" id="imageUpload" accept="image/*" style="display: none;" onchange="uploadImage(event)">
+        </label>
       </div>
 
-      <div class="camera-overlay-bottom">
+      <div class="camera-overlay-bottom" style="z-index: 2;">
         <div class="cam-timestamp" id="camTime">2026-05-30 00:00:00</div>
         <div class="cam-rec"><div class="rec-dot"></div>REC</div>
       </div>
@@ -758,8 +764,8 @@
 
 </div>
 
-<script>
-  // Sample data
+  const API_URL = "http://127.0.0.1:8000/api";
+  
   const sampleLogs = [
     { plate: 'LEB-3421', bnu: true, conf: 0.91, time: '16:34:08', sticker: true },
     { plate: 'AUC-058', bnu: true, conf: 0.87, time: '16:31:22', sticker: true },
@@ -774,8 +780,9 @@
   ];
 
   const plates = ['LEB-3421', 'AUC-058', 'LEA-7734', 'LZB-9901', 'AUB-2210', 'RHC-112', 'KHI-4410', 'ISL-7721'];
-  let logs = [...sampleLogs];
+  let logs = [];
   let currentFilter = 'all';
+  let isApiOnline = false;
 
   // Clock
   function updateClock() {
@@ -788,12 +795,64 @@
   setInterval(updateClock, 1000);
   updateClock();
 
-  // Render logs
+  // Check API health and load data
+  async function initDashboard() {
+    try {
+      const res = await fetch(`${API_URL}/status`);
+      const data = await res.json();
+      if (data.status === "online") {
+        isApiOnline = true;
+        document.querySelector('.status-text').textContent = "SYSTEM LIVE";
+      }
+    } catch (e) {
+      isApiOnline = false;
+      document.querySelector('.status-text').textContent = "SIMULATOR ACTIVE";
+      document.querySelector('.status-text').style.color = "var(--gold)";
+      document.querySelector('.status-dot').style.background = "var(--gold)";
+      document.querySelector('.nav-status').style.borderColor = "var(--gold)";
+      document.querySelector('.nav-status').style.background = "var(--gold-dim)";
+      logs = [...sampleLogs];
+    }
+    
+    await refreshData();
+    renderChart();
+  }
+
+  // Refresh statistics and logs
+  async function refreshData() {
+    if (isApiOnline) {
+      try {
+        const statsRes = await fetch(`${API_URL}/stats`);
+        const stats = await statsRes.json();
+        
+        document.getElementById('totalCount').textContent = stats.totalCount;
+        document.getElementById('bnuCount').textContent = stats.bnuCount;
+        document.getElementById('nonBnuCount').textContent = stats.nonBnuCount;
+        document.getElementById('lastTime').textContent = stats.lastTime;
+        
+        const logsRes = await fetch(`${API_URL}/logs?filter_type=${currentFilter}`);
+        logs = await logsRes.json();
+      } catch (e) {
+        console.error("Failed to load API data: ", e);
+      }
+    }
+    renderLogs();
+  }
+
+  // Render logs panel
   function renderLogs() {
     const list = document.getElementById('logsList');
-    const filtered = currentFilter === 'all' ? logs :
-                     currentFilter === 'bnu' ? logs.filter(l => l.bnu) :
-                     logs.filter(l => !l.bnu);
+    const filtered = isApiOnline ? logs : (
+      currentFilter === 'all' ? logs :
+      currentFilter === 'bnu' ? logs.filter(l => l.bnu) :
+      logs.filter(l => !l.bnu)
+    );
+    
+    if (filtered.length === 0) {
+      list.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-dim); font-size:12px;">No logs recorded yet.</div>`;
+      return;
+    }
+
     list.innerHTML = filtered.map(log => `
       <div class="log-entry ${log.bnu ? 'bnu' : 'not-bnu'}">
         <div class="log-top">
@@ -808,15 +867,15 @@
     `).join('');
   }
 
-  // Filter
-  function filterLogs(type, btn) {
+  // Filter logs tab handler
+  async function filterLogs(type, btn) {
     currentFilter = type;
     document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
-    renderLogs();
+    await refreshData();
   }
 
-  // Mini chart
+  // Mini hourly chart
   function renderChart() {
     const chart = document.getElementById('miniChart');
     const heights = [20, 35, 45, 30, 60, 80, 95, 70, 55, 40, 30, 48];
@@ -825,68 +884,125 @@
     ).join('');
   }
 
-  // Simulate detection
-  let detectionActive = false;
-  function simulateDetection() {
-    if (detectionActive) return;
-    detectionActive = true;
+  // Live image upload processing
+  let scanActive = false;
+  async function uploadImage(event) {
+    if (scanActive) return;
+    const file = event.target.files[0];
+    if (!file) return;
 
-    // Hide placeholder
-    document.getElementById('cameraPlaceholder').style.display = 'none';
+    scanActive = true;
+    
+    // Preview original file
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = document.getElementById('cameraImage');
+      img.src = e.target.result;
+      img.style.display = 'block';
+      document.getElementById('cameraPlaceholder').style.display = 'none';
+    }
+    reader.readAsDataURL(file);
 
-    // Show detection boxes
-    setTimeout(() => {
-      const isBNU = Math.random() > 0.3;
-      const plate = plates[Math.floor(Math.random() * plates.length)];
-      const conf = (0.7 + Math.random() * 0.25).toFixed(2);
-      const stickerConf = (0.75 + Math.random() * 0.2).toFixed(2);
+    // Start scanline
+    const scanLine = document.getElementById('scanLine');
+    scanLine.style.display = 'block';
 
-      if (isBNU) {
-        document.getElementById('stickerBox').style.display = 'block';
-        document.getElementById('stickerBox').textContent = `bnu_sticker ${stickerConf}`;
+    // Await API prediction or run mock fallback
+    if (isApiOnline) {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      try {
+        const response = await fetch(`${API_URL}/detect`, {
+          method: "POST",
+          body: formData
+        });
+        const data = await response.json();
+        
+        scanLine.style.display = 'none';
+        scanActive = false;
+        
+        if (data.success) {
+          const res = data.result;
+          // Show annotated image returned by API
+          document.getElementById('cameraImage').src = data.image;
+          
+          // Update prediction info UI
+          updateResultUI(res.bnu_sticker_detected, res.sticker_confidence, res.plate_number, res.plate_confidence);
+          await refreshData();
+        } else {
+          alert("Detection error: " + data.error);
+        }
+      } catch (err) {
+        scanLine.style.display = 'none';
+        scanActive = false;
+        alert("API connection lost. Running simulation fallback instead.");
+        simulateMockDetection(file);
       }
-      document.getElementById('plateBox').style.display = 'block';
-      document.getElementById('plateBox').textContent = `number_plate ${conf}`;
-
-      // Update result cards
-      const stickerResult = document.getElementById('stickerResult');
-      stickerResult.className = `result-item ${isBNU ? 'bnu-yes' : 'bnu-no'}`;
-      document.getElementById('stickerVal').textContent = isBNU ? '✅ DETECTED' : '❌ NOT FOUND';
-      document.getElementById('stickerConf').textContent = `Confidence: ${(stickerConf * 100).toFixed(0)}%`;
-      document.getElementById('stickerBar').style.width = `${stickerConf * 100}%`;
-
-      document.getElementById('plateVal').textContent = plate;
-      document.getElementById('plateConf').textContent = `Confidence: ${(conf * 100).toFixed(0)}%`;
-      document.getElementById('plateBar').style.width = `${conf * 100}%`;
-
-      const statusResult = document.getElementById('statusResult');
-      statusResult.className = `result-item ${isBNU ? 'bnu-yes' : 'bnu-no'}`;
-      document.getElementById('statusVal').textContent = isBNU ? '✅ BNU VEHICLE — ALLOW ENTRY' : '❌ NOT BNU — DENY ENTRY';
-
-      // Add to logs
-      const now = new Date().toLocaleTimeString('en-GB');
-      logs.unshift({ plate, bnu: isBNU, conf: parseFloat(conf), time: now, sticker: isBNU });
-
-      // Update stats
-      document.getElementById('totalCount').textContent = logs.length;
-      document.getElementById('bnuCount').textContent = logs.filter(l => l.bnu).length;
-      document.getElementById('nonBnuCount').textContent = logs.filter(l => !l.bnu).length;
-      document.getElementById('lastTime').textContent = now.slice(0,5);
-
-      renderLogs();
-
+    } else {
       setTimeout(() => {
-        document.getElementById('stickerBox').style.display = 'none';
-        document.getElementById('plateBox').style.display = 'none';
-        detectionActive = false;
-      }, 3000);
-
-    }, 800);
+        scanLine.style.display = 'none';
+        scanActive = false;
+        simulateMockDetection(file);
+      }, 2000);
+    }
   }
 
-  // Init
-  renderLogs();
-  renderChart();
+  // Update Prediction UI cards
+  function updateResultUI(isBNU, stickerConf, plateNumber, plateConf) {
+    const stickerResult = document.getElementById('stickerResult');
+    stickerResult.className = `result-item ${isBNU ? 'bnu-yes' : 'bnu-no'}`;
+    document.getElementById('stickerVal').textContent = isBNU ? '✅ DETECTED' : '❌ NOT FOUND';
+    document.getElementById('stickerConf').textContent = `Confidence: ${(stickerConf * 100).toFixed(0)}%`;
+    document.getElementById('stickerBar').style.width = `${stickerConf * 100}%`;
+
+    document.getElementById('plateVal').textContent = plateNumber;
+    document.getElementById('plateConf').textContent = `Confidence: ${(plateConf * 100).toFixed(0)}%`;
+    document.getElementById('plateBar').style.width = `${plateConf * 100}%`;
+
+    const statusResult = document.getElementById('statusResult');
+    statusResult.className = `result-item ${isBNU ? 'bnu-yes' : 'bnu-no'}`;
+    document.getElementById('statusVal').textContent = isBNU ? '✅ BNU VEHICLE — ALLOW ENTRY' : '❌ NOT BNU — DENY ENTRY';
+  }
+
+  // Mock detection fallback when API server is offline
+  function simulateMockDetection(file) {
+    const isBNU = Math.random() > 0.3;
+    const plate = plates[Math.floor(Math.random() * plates.length)];
+    const conf = parseFloat((0.7 + Math.random() * 0.25).toFixed(2));
+    const stickerConf = parseFloat((0.75 + Math.random() * 0.2).toFixed(2));
+
+    updateResultUI(isBNU, stickerConf, plate, conf);
+
+    // Push log mock
+    const now = new Date().toLocaleTimeString('en-GB');
+    logs.unshift({ plate, bnu: isBNU, conf: conf, time: now, sticker: isBNU });
+    
+    document.getElementById('totalCount').textContent = logs.length;
+    document.getElementById('bnuCount').textContent = logs.filter(l => l.bnu).length;
+    document.getElementById('nonBnuCount').textContent = logs.filter(l => !l.bnu).length;
+    document.getElementById('lastTime').textContent = now.slice(0, 5);
+    
+    renderLogs();
+  }
+
+  // Button: Simulate Detection
+  function simulateDetection() {
+    if (isApiOnline) {
+      alert("System is live. Please use 'Select Image File' to upload and test real images.");
+    } else {
+      document.getElementById('cameraPlaceholder').style.display = 'none';
+      const scanLine = document.getElementById('scanLine');
+      scanLine.style.display = 'block';
+      setTimeout(() => {
+        scanLine.style.display = 'none';
+        simulateMockDetection(null);
+      }, 1500);
+    }
+  }
+
+  // Start initialization
+  initDashboard();
 </script>
 </body>
 </html>
