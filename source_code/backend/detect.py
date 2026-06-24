@@ -4,6 +4,7 @@ from ultralytics import YOLO
 import sqlite3
 from datetime import datetime
 import easyocr
+import re
 
 # ============ CONFIG ============
 # Use absolute path based on this script's location so it works when run directly
@@ -49,6 +50,17 @@ def log_vehicle(conn, cursor, plate, bnu, conf):
           now.strftime('%H:%M:%S')))
     conn.commit()
 
+def clean_plate_text(text):
+    if not text:
+        return 'NOT DETECTED'
+    # Remove special characters, punctuation, and extra whitespace
+    cleaned = re.sub(r'[^A-Z0-9\s-]', '', text.upper())
+    # Strip leading/trailing whitespaces and collapse multiple spaces into a single space
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    if not cleaned:
+        return 'NOT DETECTED'
+    return cleaned
+
 # ============ DETECTION ============
 def detect(image_path, confidence=CONFIDENCE, timeout=10000):
     conn, cursor = init_db()
@@ -83,7 +95,8 @@ def detect(image_path, confidence=CONFIDENCE, timeout=10000):
                 except Exception:
                     ocr_result = []
                 if ocr_result:
-                    plate_text = ' '.join(ocr_result).upper()
+                    raw_text = ' '.join(ocr_result)
+                    plate_text = clean_plate_text(raw_text)
                     plate_conf = conf
 
         elif label == 'bnu_sticker':
