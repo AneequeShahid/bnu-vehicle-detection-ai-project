@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BNU Vehicle Detector - Interactive Demo App</title>
+  <!-- Modern Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #070913;
+      --bg-panel: rgba(13, 17, 33, 0.75);
+      --bg-card: rgba(22, 28, 54, 0.5);
+      --border-glow: rgba(0, 230, 118, 0.2);
+      --border-dim: rgba(255, 255, 255, 0.08);
+      
+      --neon-green: #00e676;
+      --neon-green-dim: rgba(0, 230, 118, 0.15);
+      --neon-blue: #00b0ff;
+      --neon-blue-dim: rgba(0, 176, 255, 0.15);
+      --neon-gold: #ffd600;
+      --neon-gold-dim: rgba(255, 214, 0, 0.15);
+      --neon-red: #ff1744;
+      --neon-red-dim: rgba(255, 23, 68, 0.15);
+      
+      --text-main: #f1f5f9;
+      --text-muted: #64748b;
+      --text-mid: #94a3b8;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: radial-gradient(circle at 50% 0%, #151a36 0%, var(--bg-dark) 70%);
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.2);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-dim);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--neon-blue);
+    }
+
+    header {
+      background: rgba(7, 9, 19, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-dim);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-container {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, var(--neon-green), var(--neon-blue));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 15px rgba(0, 176, 255, 0.4);
+      animation: rotateGrad 6s linear infinite;
+    }
+
+    @keyframes rotateGrad {
+      0% { filter: hue-rotate(0deg); }
+      100% { filter: hue-rotate(360deg); }
+    }
+
+    .brand-title h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(90deg, #fff, #a5b4fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-title p {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .system-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--neon-green-dim);
+      border: 1px solid var(--neon-green);
+      border-radius: 30px;
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--neon-green);
+      box-shadow: 0 0 10px rgba(0, 230, 118, 0.1);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      box-shadow: 0 0 8px var(--neon-green);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.2); }
+    }
+
+    /* Main Container */
+    .app-container {
+      max-width: 1400px;
+      margin: 24px auto;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 24px;
+      flex: 1;
+    }
+
+    /* Glassmorphism Panels */
+    .glass-panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-dim);
+      border-radius: 20px;
+      padding: 24px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Sidebar list */
+    .vehicle-selector {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--neon-blue);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .section-title::before {
+      content: '';
+      width: 4px;
+      height: 15px;
+      background: var(--neon-blue);
+      border-radius: 2px;
+    }
+
+    /* Stats Ribbon */
+    .stats-ribbon {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-dim);
+      border-radius: 16px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255,255,255,0.15);
+      background: rgba(22, 28, 54, 0.7);
+    }
+
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+    }
+
+    .stat-card.green::after { background: var(--neon-green); }
+    .stat-card.blue::after { background: var(--neon-blue); }
+    .stat-card.red::after { background: var(--neon-red); }
+    .stat-card.gold::after { background: var(--neon-gold); }
+
+    .stat-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+
+    .stat-card.green .stat-num { color: var(--neon-green); }
+    .stat-card.blue .stat-num { color: var(--neon-blue); }
+    .stat-card.red .stat-num { color: var(--neon-red); }
+    .stat-card.gold .stat-num { color: var(--neon-gold); }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Simulation Area */
+    .simulation-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .feed-container {
+      background: #02040a;
+      border: 1px solid var(--border-dim);
+      border-radius: 16px;
+      aspect-ratio: 16/10;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Car Graphics (SVG based) */
+    .car-svg-wrapper {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: filter 0.5s;
+    }
+
+    /* Bounding Boxes overlay */
+    .bbox {
+      position: absolute;
+      border: 2px solid;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.3s ease-in;
+    }
+
+    .bbox.sticker {
+      border-color: var(--neon-green);
+      color: var(--neon-green);
+      background: var(--neon-green-dim);
+      top: 30%;
+      right: 32%;
+      width: 45px;
+      height: 45px;
+    }
+
+    .bbox.plate {
+      border-color: var(--neon-gold);
+      color: var(--neon-gold);
+      background: var(--neon-gold-dim);
+      bottom: 25%;
+      left: 38%;
+      width: 100px;
+      height: 38px;
+    }
+
+    .laser-scanner {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+      box-shadow: 0 0 10px var(--neon-blue);
+      z-index: 5;
+      opacity: 0;
+    }
+
+    .scanning .laser-scanner {
+      animation: sweep 1.5s ease-in-out infinite;
+      opacity: 1;
+    }
+
+    @keyframes sweep {
+      0% { top: 0%; }
+      50% { top: 100%; }
+      100% { top: 0%; }
+    }
+
+    /* Vehicle details */
+    .details-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .result-ribbon {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .result-item-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-dim);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .result-item-card.success {
+      border-color: var(--neon-green);
+      background: var(--neon-green-dim);
+    }
+    .result-item-card.error {
+      border-color: var(--neon-red);
+      background: var(--neon-red-dim);
+    }
+
+    .res-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .res-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .success .res-value { color: var(--neon-green); }
+    .error .res-value { color: var(--neon-red); }
+
+    .res-meta {
+      font-size: 11px;
+      color: var(--text-mid);
+      margin-top: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .status-badge-big {
+      background: var(--bg-card);
+      border: 1px solid var(--border-dim);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .status-badge-big.allow {
+      border-color: var(--neon-green);
+      background: var(--neon-green-dim);
+      color: var(--neon-green);
+      box-shadow: 0 0 15px rgba(0, 230, 118, 0.15);
+    }
+
+    .status-badge-big.deny {
+      border-color: var(--neon-red);
+      background: var(--neon-red-dim);
+      color: var(--neon-red);
+      box-shadow: 0 0 15px rgba(255, 23, 68, 0.15);
+    }
+
+    /* Log list card style */
+    .vehicle-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-dim);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .vehicle-card:hover, .vehicle-card.active {
+      background: rgba(22, 28, 54, 0.85);
+      border-color: var(--neon-blue);
+      transform: scale(1.02);
+    }
+
+    .veh-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .veh-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .veh-plate-mini {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--neon-gold);
+      background: rgba(255, 214, 0, 0.08);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 214, 0, 0.2);
+      width: fit-content;
+    }
+
+    .status-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 30px;
+      letter-spacing: 0.5px;
+    }
+
+    .status-pill.allow {
+      background: var(--neon-green-dim);
+      color: var(--neon-green);
+      border: 1px solid var(--neon-green);
+    }
+
+    .status-pill.deny {
+      background: var(--neon-red-dim);
+      color: var(--neon-red);
+      border: 1px solid var(--neon-red);
+    }
+
+    /* Logs Panel */
+    .table-container {
+      flex: 1;
+      max-height: 250px;
+      overflow-y: auto;
+      border: 1px solid var(--border-dim);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    th {
+      background: rgba(13, 17, 33, 0.9);
+      padding: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--neon-blue);
+      border-bottom: 1px solid var(--border-dim);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border-dim);
+      color: var(--text-mid);
+    }
+
+    tr:hover td {
+      background: rgba(255,255,255,0.02);
+      color: var(--text-main);
+    }
+
+    .td-plate {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: var(--neon-gold);
+    }
+
+    /* Tabs for secondary info */
+    .tabs-wrapper {
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-dim);
+      margin-top: 8px;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      color: var(--neon-blue);
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--neon-blue);
+    }
+
+    .tab-content {
+      display: none;
+      font-size: 13px;
+      color: var(--text-mid);
+      line-height: 1.6;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .arch-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-dim);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .arch-card h4 {
+      color: var(--text-main);
+      margin-bottom: 4px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .arch-card p {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .metrics-bar-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .metrics-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .metrics-bar-bg {
+      height: 6px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .metrics-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--neon-blue), var(--neon-green));
+    }
+
+    /* Live feed clock overlays */
+    .cam-label {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #fff;
+      background: rgba(0,0,0,0.6);
+      padding: 4px 8px;
+      border-radius: 4px;
+      z-index: 5;
+    }
+
+    .cam-clock {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #fff;
+      background: rgba(0,0,0,0.6);
+      padding: 4px 8px;
+      border-radius: 4px;
+      z-index: 5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand-wrap">
+      <div class="logo-container">🚗</div>
+      <div class="brand-title">
+        <h1>BNU Vehicle Detector</h1>
+        <p>Interactive Gate Simulator & Dashboard</p>
+      </div>
+    </div>
+    <div class="system-status">
+      <div class="pulse-dot"></div>
+      <span>STATION ACTIVE</span>
+    </div>
+  </header>
+
+  <!-- Container -->
+  <div class="app-container">
+    
+    <!-- Left Panel: Live simulation & logs -->
+    <div class="glass-panel">
+      
+      <!-- Stats ribbon -->
+      <div class="stats-ribbon">
+        <div class="stat-card green">
+          <div class="stat-num" id="stat-total">14</div>
+          <div class="stat-label">Total Logs</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-num" id="stat-allowed">9</div>
+          <div class="stat-label font-bold">BNU Allowed</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-num" id="stat-denied">5</div>
+          <div class="stat-label">Non-BNU Denied</div>
+        </div>
+        <div class="stat-card gold">
+          <div class="stat-num">95.4%</div>
+          <div class="stat-label">Precision</div>
+        </div>
+      </div>
+
+      <!-- Simulation Core -->
+      <div class="simulation-grid">
+        
+        <!-- Live Bboxes Camera Feed -->
+        <div class="feed-container" id="feed-box">
+          <div class="cam-label">CAM 01 // ENTRY_GATE</div>
+          <div class="cam-clock" id="cam-time">2026-06-09 22:00:00</div>
+          
+          <div class="laser-scanner"></div>
+          
+          <!-- Bboxes overlays -->
+          <div class="bbox sticker" id="box-sticker">Sticker</div>
+          <div class="bbox plate" id="box-plate">Plate</div>
+
+          <!-- Car SVG Graphic wrapper -->
+          <div class="car-svg-wrapper" id="svg-view">
+            <!-- Starting placeholder SVG -->
+            <svg id="car-svg" viewBox="0 0 500 300" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+              <rect width="100%" height="100%" fill="#0a0d1a" />
+              <!-- Guide Grid lines -->
+              <line x1="0" y1="150" x2="500" y2="150" stroke="rgba(0,176,255,0.05)" stroke-dasharray="5,5"/>
+              <line x1="250" y1="0" x2="250" y2="300" stroke="rgba(0,176,255,0.05)" stroke-dasharray="5,5"/>
+              <!-- Crosshair -->
+              <circle cx="250" cy="150" r="40" fill="none" stroke="rgba(0,176,255,0.15)" stroke-width="1"/>
+              <text x="250" y="155" fill="rgba(0, 176, 255, 0.4)" font-family="Outfit" font-size="12" text-anchor="middle">AWAITING VEHICLE ENTRY</text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Detection analysis details -->
+        <div class="details-container">
+          <div class="status-badge-big" id="gate-decision">⏳ WAITING FOR VEHICLE</div>
+          
+          <div class="result-ribbon">
+            <div class="result-item-card" id="card-sticker">
+              <div class="res-label">BNU Windshield Sticker</div>
+              <div class="res-value" id="val-sticker">N/A</div>
+              <div class="res-meta" id="conf-sticker">YOLOv8: --</div>
+            </div>
+            
+            <div class="result-item-card" id="card-plate">
+              <div class="res-label">License Plate OCR</div>
+              <div class="res-value" id="val-plate">N/A</div>
+              <div class="res-meta" id="conf-plate">EasyOCR: --</div>
+            </div>
+          </div>
+
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-dim); border-radius: 12px; padding: 12px; font-size: 11px; color: var(--text-muted);">
+            <span style="color: var(--neon-blue); font-weight:700;">PRO-TIP:</span> Select a vehicle from the right sidebar to simulate driving through the campus camera gate. The model will run detection and OCR dynamically.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SQLite Logs table -->
+      <div>
+        <div class="section-title">Database Logs (SQLite vehicle_logs)</div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Plate Number</th>
+                <th>BNU Sticker</th>
+                <th>Confidence</th>
+                <th>Timestamp</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="log-table-body">
+              <!-- Initial Logs -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Panel: Selector & Information -->
+    <div class="glass-panel" style="gap: 16px;">
+      
+      <div>
+        <div class="section-title">Select Test Vehicle</div>
+        <div class="vehicle-selector">
+          
+          <div class="vehicle-card" onclick="selectVehicle(0)" id="veh-0">
+            <div class="veh-info">
+              <span class="veh-name">Honda Civic (White)</span>
+              <span class="veh-plate-mini">LEB-3421</span>
+            </div>
+            <span class="status-pill allow">BNU REGISTERED</span>
+          </div>
+
+          <div class="vehicle-card" onclick="selectVehicle(1)" id="veh-1">
+            <div class="veh-info">
+              <span class="veh-name">Toyota Corolla (Black)</span>
+              <span class="veh-plate-mini">AUC-058</span>
+            </div>
+            <span class="status-pill allow">BNU REGISTERED</span>
+          </div>
+
+          <div class="vehicle-card" onclick="selectVehicle(2)" id="veh-2">
+            <div class="veh-info">
+              <span class="veh-name">Suzuki Alto (Silver)</span>
+              <span class="veh-plate-mini">RHC-112</span>
+            </div>
+            <span class="status-pill deny">UNREGISTERED</span>
+          </div>
+
+          <div class="vehicle-card" onclick="selectVehicle(3)" id="veh-3">
+            <div class="veh-info">
+              <span class="veh-name">Honda City (Red)</span>
+              <span class="veh-plate-mini">LZB-9901</span>
+            </div>
+            <span class="status-pill deny">UNREGISTERED</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Tabs and Architecture info -->
+      <div>
+        <div class="tabs-wrapper">
+          <button class="tab-btn active" onclick="switchTab('arch', this)">System Arch</button>
+          <button class="tab-btn" onclick="switchTab('metrics', this)">Model Metrics</button>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <!-- System Arch Tab -->
+          <div class="tab-content active" id="tab-arch">
+            <p style="margin-bottom: 8px;">The gate camera feed triggers a computer vision pipeline that runs sequentially in the backend script:</p>
+            <div class="arch-grid">
+              <div class="arch-card">
+                <h4>1. YOLOv8</h4>
+                <p>Locates windshield sticker & number plate boxes.</p>
+              </div>
+              <div class="arch-card">
+                <h4>2. EasyOCR</h4>
+                <p>Crops number plate bounding box and reads text.</p>
+              </div>
+              <div class="arch-card">
+                <h4>3. SQLite</h4>
+                <p>Saves log record to database with timestamp.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Model Metrics Tab -->
+          <div class="tab-content" id="tab-metrics">
+            <div class="metrics-bar-wrap">
+              <div class="metrics-label-row">
+                <span>Overall Model Precision</span>
+                <span>95.4%</span>
+              </div>
+              <div class="metrics-bar-bg">
+                <div class="metrics-bar-fill" style="width: 95.4%"></div>
+              </div>
+            </div>
+
+            <div class="metrics-bar-wrap">
+              <div class="metrics-label-row">
+                <span>Number Plate mAP50</span>
+                <span>99.5%</span>
+              </div>
+              <div class="metrics-bar-bg">
+                <div class="metrics-bar-fill" style="width: 99.5%"></div>
+              </div>
+            </div>
+
+            <div class="metrics-bar-wrap">
+              <div class="metrics-label-row">
+                <span>BNU Sticker mAP50</span>
+                <span>52.8%</span>
+              </div>
+              <div class="metrics-bar-bg">
+                <div class="metrics-bar-fill" style="width: 52.8%"></div>
+              </div>
+            </div>
+            
+            <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+              *Tested on validation set of 17 images. Stickers have lower mAP due to windshield glare and size scale.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // Audio synthesizer for premium gate chimes
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+        if (type === 'allow') {
+          // Double success beep
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523.25, now); // C5
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+          osc.start(now);
+          osc.stop(now + 0.1);
+
+          setTimeout(() => {
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.frequency.setValueAtTime(659.25, now + 0.1); // E5
+            gain2.gain.setValueAtTime(0.1, now + 0.1);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+            osc2.start(now + 0.1);
+            osc2.stop(now + 0.25);
+          }, 80);
+        } else if (type === 'deny') {
+          // Warning buzzer
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(150, now);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.linearRampToValueAtTime(0.001, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        } else if (type === 'scan') {
+          // Sci-fi sweep
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.exponentialRampToValueAtTime(900, now + 0.8);
+          gain.gain.setValueAtTime(0.05, now);
+          gain.gain.linearRampToValueAtTime(0.001, now + 0.8);
+          osc.start(now);
+          osc.stop(now + 0.8);
+        }
+      } catch (e) {
+        console.log("Audio not allowed yet by user interaction");
+      }
+    }
+
+    // Live clock
+    function updateClock() {
+      const now = new Date();
+      const yr = now.getFullYear();
+      const mo = String(now.getMonth()+1).padStart(2, '0');
+      const dy = String(now.getDate()).padStart(2, '0');
+      const timeStr = now.toLocaleTimeString('en-GB');
+      document.getElementById('cam-time').textContent = `${yr}-${mo}-${dy} ${timeStr}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Vehicles data & SVG shapes
+    const vehicles = [
+      {
+        name: 'Honda Civic (White)',
+        plate: 'LEB-3421',
+        sticker: true,
+        stickerConf: '92%',
+        plateConf: '98%',
+        color: '#ffffff',
+        status: 'ALLOW',
+        svg: `<svg viewBox="0 0 500 300" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100%" height="100%" fill="#0a0d1a" />
+                <g transform="translate(100, 70)">
+                  <!-- Car Body Back/Front -->
+                  <path d="M40,110 L260,110 L250,55 L50,55 Z" fill="#e2e8f0" stroke="#475569" stroke-width="2"/>
+                  <!-- Windshield -->
+                  <path d="M55,60 L245,60 L235,90 L65,90 Z" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+                  <!-- Windshield Sticker (Green) -->
+                  <rect x="210" y="70" width="12" height="12" fill="#00e676" rx="1" id="svg-sticker-element" />
+                  <!-- Bumper -->
+                  <rect x="20" y="110" width="260" height="25" fill="#334155" rx="5" />
+                  <!-- Headlights -->
+                  <ellipse cx="45" cy="118" rx="15" ry="6" fill="#fffde7" />
+                  <ellipse cx="255" cy="118" rx="15" ry="6" fill="#fffde7" />
+                  <!-- License Plate -->
+                  <rect x="110" y="116" width="80" height="20" fill="#f8fafc" rx="2" stroke="#000" stroke-width="1.5" />
+                  <text x="150" y="131" fill="#000" font-family="JetBrains Mono" font-size="10" font-weight="700" text-anchor="middle">LEB-3421</text>
+                </g>
+              </svg>`
+      },
+      {
+        name: 'Toyota Corolla (Black)',
+        plate: 'AUC-058',
+        sticker: true,
+        stickerConf: '87%',
+        plateConf: '95%',
+        color: '#1e293b',
+        status: 'ALLOW',
+        svg: `<svg viewBox="0 0 500 300" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100%" height="100%" fill="#0a0d1a" />
+                <g transform="translate(100, 70)">
+                  <!-- Car Body -->
+                  <path d="M35,108 L265,108 L252,50 L48,50 Z" fill="#111827" stroke="#374151" stroke-width="2"/>
+                  <!-- Windshield -->
+                  <path d="M55,55 L245,55 L238,88 L62,88 Z" fill="#1f2937" stroke="#4b5563" stroke-width="1.5"/>
+                  <!-- Windshield Sticker (Green) -->
+                  <rect x="212" y="65" width="12" height="12" fill="#00e676" rx="1" />
+                  <!-- Bumper -->
+                  <rect x="15" y="108" width="270" height="28" fill="#1f2937" rx="5" />
+                  <!-- Headlights -->
+                  <ellipse cx="45" cy="116" rx="18" ry="5" fill="#fef08a" />
+                  <ellipse cx="255" cy="116" rx="18" ry="5" fill="#fef08a" />
+                  <!-- License Plate -->
+                  <rect x="110" y="114" width="80" height="20" fill="#f8fafc" rx="2" stroke="#000" stroke-width="1.5" />
+                  <text x="150" y="129" fill="#000" font-family="JetBrains Mono" font-size="10" font-weight="700" text-anchor="middle">AUC-058</text>
+                </g>
+              </svg>`
+      },
+      {
+        name: 'Suzuki Alto (Silver)',
+        plate: 'RHC-112',
+        sticker: false,
+        stickerConf: '0%',
+        plateConf: '91%',
+        color: '#94a3b8',
+        status: 'DENY',
+        svg: `<svg viewBox="0 0 500 300" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100%" height="100%" fill="#0a0d1a" />
+                <g transform="translate(100, 70)">
+                  <!-- Car Body -->
+                  <path d="M45,115 L255,115 L242,60 L58,60 Z" fill="#94a3b8" stroke="#475569" stroke-width="2"/>
+                  <!-- Windshield -->
+                  <path d="M62,65 L238,65 L228,95 L72,95 Z" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+                  <!-- Bumper -->
+                  <rect x="25" y="115" width="250" height="22" fill="#334155" rx="5" />
+                  <!-- Headlights -->
+                  <ellipse cx="50" cy="122" rx="12" ry="7" fill="#fff" />
+                  <ellipse cx="250" cy="122" rx="12" ry="7" fill="#fff" />
+                  <!-- License Plate -->
+                  <rect x="110" y="117" width="80" height="20" fill="#f8fafc" rx="2" stroke="#000" stroke-width="1.5" />
+                  <text x="150" y="132" fill="#000" font-family="JetBrains Mono" font-size="10" font-weight="700" text-anchor="middle">RHC-112</text>
+                </g>
+              </svg>`
+      },
+      {
+        name: 'Honda City (Red)',
+        plate: 'LZB-9901',
+        sticker: false,
+        stickerConf: '0%',
+        plateConf: '93%',
+        color: '#dc2626',
+        status: 'DENY',
+        svg: `<svg viewBox="0 0 500 300" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100%" height="100%" fill="#0a0d1a" />
+                <g transform="translate(100, 70)">
+                  <!-- Car Body -->
+                  <path d="M38,109 L262,109 L250,52 L50,52 Z" fill="#991b1b" stroke="#7f1d1d" stroke-width="2"/>
+                  <!-- Windshield -->
+                  <path d="M58,57 L242,57 L235,90 L65,90 Z" fill="#111827" stroke="#374151" stroke-width="1.5"/>
+                  <!-- Bumper -->
+                  <rect x="18" y="109" width="264" height="26" fill="#1f2937" rx="5" />
+                  <!-- Headlights -->
+                  <ellipse cx="45" cy="117" rx="16" ry="6" fill="#fef9c3" />
+                  <ellipse cx="255" cy="117" rx="16" ry="6" fill="#fef9c3" />
+                  <!-- License Plate -->
+                  <rect x="110" y="115" width="80" height="20" fill="#f8fafc" rx="2" stroke="#000" stroke-width="1.5" />
+                  <text x="150" y="130" fill="#000" font-family="JetBrains Mono" font-size="10" font-weight="700" text-anchor="middle">LZB-9901</text>
+                </g>
+              </svg>`
+      }
+    ];
+
+    // Mock logs list database
+    let logsList = [
+      { id: 14, plate: 'LEB-3421', sticker: 'YES', conf: '96%', time: '21:59:12', status: 'ALLOW' },
+      { id: 13, plate: 'AUC-058', sticker: 'YES', conf: '91%', time: '21:54:33', status: 'ALLOW' },
+      { id: 12, plate: 'RHC-112', sticker: 'NO', conf: '88%', time: '21:49:05', status: 'DENY' },
+      { id: 11, plate: 'LEA-7734', sticker: 'YES', conf: '94%', time: '21:42:18', status: 'ALLOW' },
+      { id: 10, plate: 'MNS-8891', sticker: 'NO', conf: '90%', time: '21:38:40', status: 'DENY' },
+      { id: 9, plate: 'LZB-9901', sticker: 'NO', conf: '89%', time: '21:30:11', status: 'DENY' },
+      { id: 8, plate: 'AUC-058', sticker: 'YES', conf: '92%', time: '21:25:52', status: 'ALLOW' },
+      { id: 7, plate: 'AUB-2210', sticker: 'YES', conf: '95%', time: '21:18:24', status: 'ALLOW' },
+      { id: 6, plate: 'LEC-5577', sticker: 'YES', conf: '91%', time: '21:12:08', status: 'ALLOW' },
+      { id: 5, plate: 'KHI-3310', sticker: 'NO', conf: '87%', time: '21:05:44', status: 'DENY' },
+      { id: 4, plate: 'LHR-7721', sticker: 'YES', conf: '93%', time: '20:58:30', status: 'ALLOW' },
+      { id: 3, plate: 'MNC-1120', sticker: 'NO', conf: '86%', time: '20:51:15', status: 'DENY' },
+      { id: 2, plate: 'LEB-3421', sticker: 'YES', conf: '95%', time: '20:45:02', status: 'ALLOW' },
+      { id: 1, plate: 'AUC-058', sticker: 'YES', conf: '90%', time: '20:38:59', status: 'ALLOW' }
+    ];
+
+    // State counters
+    let countTotal = logsList.length;
+    let countAllowed = logsList.filter(l => l.status === 'ALLOW').length;
+    let countDenied = logsList.filter(l => l.status === 'DENY').length;
+
+    function refreshStats() {
+      document.getElementById('stat-total').textContent = countTotal;
+      document.getElementById('stat-allowed').textContent = countAllowed;
+      document.getElementById('stat-denied').textContent = countDenied;
+    }
+
+    // Render Table Logs
+    function renderTable() {
+      const tbody = document.getElementById('log-table-body');
+      tbody.innerHTML = logsList.map(log => `
+        <tr>
+          <td>#${log.id}</td>
+          <td class="td-plate">${log.plate}</td>
+          <td>${log.sticker === 'YES' ? '<span style="color: var(--neon-green)">PRESENT</span>' : '<span style="color: var(--text-muted)">ABSENT</span>'}</td>
+          <td>${log.conf}</td>
+          <td>${log.time}</td>
+          <td><span class="status-pill ${log.status === 'ALLOW' ? 'allow' : 'deny'}">${log.status === 'ALLOW' ? 'ALLOW' : 'DENY'}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    // Select and run detection animation
+    let isScanning = false;
+    function selectVehicle(idx) {
+      if (isScanning) return;
+      isScanning = true;
+
+      // Highlight active sidebar item
+      for (let i = 0; i < 4; i++) {
+        document.getElementById(`veh-${i}`).classList.remove('active');
+      }
+      document.getElementById(`veh-${idx}`).classList.add('active');
+
+      const car = vehicles[idx];
+
+      // Load SVG and start scanner overlay
+      const svgView = document.getElementById('svg-view');
+      const feedBox = document.getElementById('feed-box');
+      
+      // Reset bounding boxes and details
+      document.getElementById('box-sticker').style.opacity = 0;
+      document.getElementById('box-plate').style.opacity = 0;
+      
+      const gateDecision = document.getElementById('gate-decision');
+      gateDecision.className = 'status-badge-big';
+      gateDecision.textContent = 'Scanning Vehicle...';
+      
+      document.getElementById('card-sticker').className = 'result-item-card';
+      document.getElementById('val-sticker').textContent = '—';
+      document.getElementById('conf-sticker').textContent = 'YOLOv8: --';
+
+      document.getElementById('card-plate').className = 'result-item-card';
+      document.getElementById('val-plate').textContent = '—';
+      document.getElementById('conf-plate').textContent = 'EasyOCR: --';
+
+      svgView.innerHTML = car.svg;
+      feedBox.classList.add('scanning');
+      playSound('scan');
+
+      // 1.5s Scanner effect
+      setTimeout(() => {
+        feedBox.classList.remove('scanning');
+        
+        // Show YOLOv8 bounding boxes
+        if (car.sticker) {
+          document.getElementById('box-sticker').style.opacity = 1;
+          document.getElementById('box-sticker').textContent = `bnu_sticker ${parseFloat(car.stickerConf)/100}`;
+          
+          document.getElementById('card-sticker').className = 'result-item-card success';
+          document.getElementById('val-sticker').textContent = '✅ sticker_present';
+          document.getElementById('conf-sticker').textContent = `YOLOv8 Conf: ${car.stickerConf}`;
+        } else {
+          document.getElementById('card-sticker').className = 'result-item-card error';
+          document.getElementById('val-sticker').textContent = '❌ sticker_absent';
+          document.getElementById('conf-sticker').textContent = 'YOLOv8 Conf: --';
+        }
+
+        document.getElementById('box-plate').style.opacity = 1;
+        document.getElementById('box-plate').textContent = `number_plate ${parseFloat(car.plateConf)/100}`;
+        
+        document.getElementById('card-plate').className = 'result-item-card';
+        document.getElementById('val-plate').textContent = car.plate;
+        document.getElementById('conf-plate').textContent = `EasyOCR Conf: ${car.plateConf}`;
+
+        // Decision Gate logic
+        if (car.status === 'ALLOW') {
+          gateDecision.className = 'status-badge-big allow';
+          gateDecision.textContent = '✅ BNU VEHICLE — ALLOW GATE';
+          playSound('allow');
+        } else {
+          gateDecision.className = 'status-badge-big deny';
+          gateDecision.textContent = '❌ NOT BNU — ACCESS DENIED';
+          playSound('deny');
+        }
+
+        // Add to database logs list
+        const timeNow = new Date().toLocaleTimeString('en-GB');
+        countTotal++;
+        if (car.status === 'ALLOW') countAllowed++;
+        else countDenied++;
+        
+        logsList.unshift({
+          id: countTotal,
+          plate: car.plate,
+          sticker: car.sticker ? 'YES' : 'NO',
+          conf: car.plateConf,
+          time: timeNow,
+          status: car.status
+        });
+
+        refreshStats();
+        renderTable();
+        isScanning = false;
+      }, 1500);
+    }
+
+    // Tabs functionality
+    function switchTab(tabId, btn) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      
+      document.getElementById(`tab-${tabId}`).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    // Init & keyboard shortcuts
+    refreshStats();
+    renderTable();
+    window.addEventListener('keydown', (event) => {
+      if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+        return;
+      }
+      const digit = parseInt(event.key, 10);
+      if (Number.isInteger(digit) && digit >= 1 && digit <= 4) {
+        selectVehicle(digit - 1);
+      }
+    });
+</script>
+</body>
+</html>
