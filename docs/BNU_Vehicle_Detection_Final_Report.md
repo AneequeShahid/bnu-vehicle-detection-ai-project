@@ -154,7 +154,7 @@ Web dashboard with live stats, simulated detection demo, vehicle logs, and hourl
 
 ### 5.3 Confusion Matrix
 
-The confusion matrix (see `06_Confusion_Matrix/confusion_matrix.png`) shows:
+The confusion matrix (see `results/confusion_matrix.png`) shows:
 
 - 1 true positive for `bnu_sticker`
 - 0 true positives for `number_plate` in matrix view (validation artifact at default confidence)
@@ -164,28 +164,27 @@ This indicates room for improvement via more training data, lower confidence thr
 
 ### 5.4 Training Curves
 
-Full training curves, PR curves, and F1 curves are in `08_Documentation_and_Results/training_results/`.
+Full training curves, PR curves, and F1 curves are in `results/training_results/`.
 
 ---
 
 ## 6. Demo Application
 
-The demo package (`07_Demo_Application/`) includes:
+The demo package includes:
 
-- Python detection backend
-- Web dashboard UI
-- Pre-trained `best.pt` model
-- Sample `bnu_vehicles.db` with logged detections
+- Python detection backend (`backend/`)
+- Web dashboard UI (`frontend/`)
+- Pre-trained `best.pt` model (stored in `trained_models/` after download)
+- Sample database logging (`backend/bnu_vehicles.db`)
 
 **To run:**
 
 ```bash
-pip install ultralytics easyocr opencv-python
-cd 07_Demo_Application/backend
-python detect.py
+pip install -r requirements.txt
+python backend/detect.py
 ```
 
-Open `07_Demo_Application/frontend/bnu_dashboard.html` in a browser.
+Open `frontend/index.html` or `frontend/bnu_dashboard.html` in a browser.
 
 ---
 
@@ -229,12 +228,12 @@ The BNU Vehicle Detection System successfully demonstrates an end-to-end compute
 
 | File | Location |
 |------|----------|
-| Source code | `03_Source_Code/` |
-| Dataset | `04_Dataset/` |
-| Model weights | `05_Trained_Models/best.pt` |
-| Confusion matrix | `06_Confusion_Matrix/confusion_matrix.png` |
-| Demo app | `07_Demo_Application/` |
-| Training results | `08_Documentation_and_Results/` |
+| Source code | `backend/`, `frontend/`, `scripts/` |
+| Dataset | `dataset/` |
+| Model weights | `trained_models/` |
+| Confusion matrix | `results/confusion_matrix.png` |
+| Demo app | `frontend/` |
+| Training results | `results/` |
 
 ---
 

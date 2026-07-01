@@ -10,7 +10,7 @@ import sqlite3
 # ============ CONFIG ============
 # Use absolute path based on this script's location so it works when run directly
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(_SCRIPT_DIR, "..", "..", "trained_models", "best.pt")
+MODEL_PATH = os.path.join(_SCRIPT_DIR, "..", "trained_models", "best.pt")
 DEFAULT_DB_PATH = os.path.join(_SCRIPT_DIR, "bnu_vehicles.db")
 CONFIDENCE = 0.5
 TEST_IMAGE = os.path.join(_SCRIPT_DIR, "test_image.jpg")

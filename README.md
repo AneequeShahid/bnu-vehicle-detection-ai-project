@@ -93,21 +93,31 @@ Web Dashboard (live feed + entry log)
 git clone https://github.com/AneequeShahid/bnu-vehicle-detection-ai-project
 cd bnu-vehicle-detection-ai-project
 
-pip install -r 03_Source_Code/requirements.txt
+pip install -r requirements.txt
 ```
 
 ### Download model weights
 
-Download `best.pt` from [GitHub Releases](../../releases) and place it in `05_Trained_Models/`.
+Download `best.pt` from [GitHub Releases](../../releases) and place it in `trained_models/`.
 
 ### Run
 
+To test the detection pipeline:
 ```bash
-cd 07_Demo_Application/backend
-python detect.py
+python backend/test_detect.py
 ```
 
-Open `07_Demo_Application/frontend/bnu_dashboard.html` in a browser.
+To run the live detection:
+```bash
+python backend/detect.py
+```
+
+To run the API server:
+```bash
+uvicorn backend.server:app --reload
+```
+
+Open `frontend/index.html` directly in your browser to play with the fully interactive mockup dashboard (requires no server running), or open `frontend/bnu_dashboard.html` to connect to the live backend server.
 
 ---
 
@@ -134,7 +144,7 @@ Model was trained on a custom dataset of BNU campus vehicles:
 - 50 epochs
 - Train/val/test split: 80/10/10
 
-See [`04_Dataset/README.md`](04_Dataset/README.md) for dataset details.
+See [`dataset/README.md`](dataset/README.md) for dataset details.
 
 ---
 
@@ -150,19 +160,17 @@ See [`04_Dataset/README.md`](04_Dataset/README.md) for dataset details.
 
 ```
 bnu-vehicle-detection-ai-project/
-├── 03_Source_Code/
-│   ├── backend/        FastAPI server + detector pipeline
-│   ├── frontend/       Web dashboard
-│   └── requirements.txt
-├── 04_Dataset/         Dataset info and README
-├── 05_Trained_Models/  Model weights (download from Releases)
-├── 06_Confusion_Matrix/ Confusion matrix outputs
-├── 07_Demo_Application/ Runnable demo
-├── 08_Documentation_and_Results/ mAP curves, training results
-├── media/              Screenshots for README
-├── results/
-│   └── sample_detections/ Detection output samples
-└── requirements.txt
+├── backend/            FastAPI server, detector pipeline, and unit tests
+├── frontend/           Web dashboard (live & interactive mock demo)
+├── notebooks/          Jupyter notebooks used for training
+├── dataset/            Dataset configuration and information
+├── trained_models/     Model weights (download from GitHub Releases)
+├── results/            Confusion matrices, training plots, and sample runs
+├── docs/               Project reports, slides, and submission checklist
+├── scripts/            Data augmentation and utility scripts
+├── .github/workflows/  Automated CI testing workflow
+├── media/              Screenshots for README documentation
+└── requirements.txt    Python package dependencies
 ```
 
 ---

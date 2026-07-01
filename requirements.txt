@@ -1,1 +1,8 @@
-# See 03_Source_Code/requirements.txt for full dependency list
+fastapi>=0.104.0
+uvicorn>=0.24.0
+ultralytics>=8.0.0
+easyocr>=1.7.0
+opencv-python>=4.8.0
+Pillow>=10.0.0
+numpy>=1.24.0
+python-multipart>=0.0.6
