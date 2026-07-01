@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BNU Vehicle Detection — Presentation</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0f1e; color: #e2e8f0; overflow: hidden; }
+  .slide { display: none; min-height: 100vh; padding: 60px 80px; flex-direction: column; justify-content: center; }
+  .slide.active { display: flex; }
+  h1 { font-size: 2.8rem; margin-bottom: 16px; background: linear-gradient(135deg, #00d084, #3d8ef8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  h2 { font-size: 1.8rem; color: #00d084; margin-bottom: 24px; border-bottom: 2px solid #1e2d4a; padding-bottom: 12px; }
+  h3 { font-size: 1.2rem; color: #3d8ef8; margin: 16px 0 8px; }
+  p, li { font-size: 1.15rem; line-height: 1.7; color: #94a3b8; }
+  ul { margin-left: 28px; margin-top: 12px; }
+  li { margin-bottom: 8px; }
+  .subtitle { font-size: 1.3rem; color: #64748b; margin-bottom: 32px; }
+  .meta { font-size: 1rem; color: #64748b; margin-top: 40px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 1rem; }
+  th, td { border: 1px solid #1e2d4a; padding: 12px 16px; text-align: left; }
+  th { background: #151e35; color: #00d084; }
+  td { color: #94a3b8; }
+  .highlight { color: #00d084; font-weight: 600; }
+  .nav { position: fixed; bottom: 24px; right: 32px; display: flex; gap: 12px; z-index: 100; }
+  .nav button { background: #151e35; border: 1px solid #1e2d4a; color: #e2e8f0; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .nav button:hover { border-color: #00d084; color: #00d084; }
+  .counter { position: fixed; bottom: 28px; left: 32px; color: #64748b; font-size: 14px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 16px; }
+  .card { background: #151e35; border: 1px solid #1e2d4a; border-radius: 12px; padding: 24px; }
+  .emoji { font-size: 3rem; margin-bottom: 16px; }
+  .flow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+  .flow span { background: #151e35; border: 1px solid #3d8ef8; padding: 10px 18px; border-radius: 8px; font-size: 0.95rem; }
+  .flow .arrow { border: none; background: none; color: #00d084; font-size: 1.5rem; }
+</style>
+</head>
+<body>
+
+<!-- Slide 1: Title -->
+<div class="slide active" data-slide="1">
+  <div class="emoji">🚗</div>
+  <h1>BNU Vehicle Detection System</h1>
+  <p class="subtitle">AI-Powered Car Sticker & Number Plate Recognition for Campus Gate Monitoring</p>
+  <p class="meta"><strong>Aneeque Shahid</strong><br>BS Computer Science — BNU Lahore — 2026</p>
+</div>
+
+<!-- Slide 2: Problem -->
+<div class="slide" data-slide="2">
+  <h2>Problem Statement</h2>
+  <ul>
+    <li>Manual gate checks at BNU are <span class="highlight">slow and inconsistent</span></li>
+    <li>Security staff must visually verify BNU parking stickers on every vehicle</li>
+    <li>No automated logging of vehicle entries and exits</li>
+    <li>Need for real-time, accurate, scalable solution</li>
+  </ul>
+  <h3>Our Solution</h3>
+  <p>Automated detection using <strong>YOLOv8</strong> + <strong>EasyOCR</strong> with a web dashboard and database logging.</p>
+</div>
+
+<!-- Slide 3: Objectives -->
+<div class="slide" data-slide="3">
+  <h2>Project Objectives</h2>
+  <div class="two-col">
+    <div class="card">
+      <h3>Detection</h3>
+      <p>Identify BNU stickers and number plates in vehicle images</p>
+    </div>
+    <div class="card">
+      <h3>Classification</h3>
+      <p>Label vehicles as BNU (ALLOW) or Non-BNU (DENY)</p>
+    </div>
+    <div class="card">
+      <h3>OCR</h3>
+      <p>Extract license plate text automatically</p>
+    </div>
+    <div class="card">
+      <h3>Logging</h3>
+      <p>Store all events in SQLite with timestamps</p>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 4: Dataset -->
+<div class="slide" data-slide="4">
+  <h2>Dataset</h2>
+  <table>
+    <tr><th>Property</th><th>Value</th></tr>
+    <tr><td>Source</td><td>Roboflow — custom BNU annotations</td></tr>
+    <tr><td>Total Images</td><td>87</td></tr>
+    <tr><td>Classes</td><td>bnu_sticker, number_plate</td></tr>
+    <tr><td>Split</td><td>62 train / 17 valid / 8 test</td></tr>
+    <tr><td>Format</td><td>YOLOv8</td></tr>
+    <tr><td>License</td><td>CC BY 4.0</td></tr>
+  </table>
+  <p style="margin-top:16px;font-size:0.95rem;">🔗 universe.roboflow.com/samis-workspace-cisly/bnu-vehicle-detector</p>
+</div>
+
+<!-- Slide 5: Architecture -->
+<div class="slide" data-slide="5">
+  <h2>System Architecture</h2>
+  <div class="flow">
+    <span>📷 Camera / Image</span>
+    <span class="arrow">→</span>
+    <span>🧠 YOLOv8 (best.pt)</span>
+    <span class="arrow">→</span>
+    <span>📝 EasyOCR</span>
+    <span class="arrow">→</span>
+    <span>✅ ALLOW / ❌ DENY</span>
+    <span class="arrow">→</span>
+    <span>💾 SQLite DB</span>
+    <span class="arrow">→</span>
+    <span>🖥️ Web Dashboard</span>
+  </div>
+  <div class="two-col" style="margin-top:32px;">
+    <div class="card"><h3>Backend</h3><p>Python, OpenCV, Ultralytics, EasyOCR</p></div>
+    <div class="card"><h3>Frontend</h3><p>HTML/CSS/JS monitoring dashboard</p></div>
+  </div>
+</div>
+
+<!-- Slide 6: Training -->
+<div class="slide" data-slide="6">
+  <h2>Model Training</h2>
+  <table>
+    <tr><th>Parameter</th><th>Value</th></tr>
+    <tr><td>Model</td><td>YOLOv8 Nano (yolov8n)</td></tr>
+    <tr><td>Image Size</td><td>640 × 640</td></tr>
+    <tr><td>Batch Size</td><td>16</td></tr>
+    <tr><td>Epochs</td><td>34 (early stop, best @ epoch 24)</td></tr>
+    <tr><td>GPU</td><td>Tesla T4 — Google Colab</td></tr>
+    <tr><td>Parameters</td><td>~3.0M</td></tr>
+  </table>
+</div>
+
+<!-- Slide 7: Results -->
+<div class="slide" data-slide="7">
+  <h2>Results — Validation Metrics</h2>
+  <table>
+    <tr><th>Class</th><th>Precision</th><th>Recall</th><th>mAP50</th><th>mAP50-95</th></tr>
+    <tr><td><strong>All</strong></td><td><strong>89.4%</strong></td><td><strong>57.3%</strong></td><td><strong>76.2%</strong></td><td><strong>56.5%</strong></td></tr>
+    <tr><td>bnu_sticker</td><td>78.8%</td><td>34.2%</td><td>52.8%</td><td>34.1%</td></tr>
+    <tr><td>number_plate</td><td>100%</td><td>80.3%</td><td>99.5%</td><td>78.9%</td></tr>
+  </table>
+  <p style="margin-top:20px;">✅ Strong plate detection &nbsp;|&nbsp; ⚠️ Sticker recall needs more data</p>
+</div>
+
+<!-- Slide 8: Demo -->
+<div class="slide" data-slide="8">
+  <h2>Demo Application</h2>
+  <ul>
+    <li><strong>Detection script</strong> — runs YOLOv8 + OCR on images</li>
+    <li><strong>Web dashboard</strong> — live stats, vehicle logs, activity chart</li>
+    <li><strong>SQLite database</strong> — persistent detection history</li>
+    <li><strong>Status overlay</strong> — green ALLOW / red DENY on frames</li>
+  </ul>
+  <h3>How to Run</h3>
+  <p><code style="color:#00d084;">pip install ultralytics easyocr opencv-python</code></p>
+  <p><code style="color:#00d084;">python backend/detect.py</code></p>
+  <p>Open <code style="color:#3d8ef8;">frontend/bnu_dashboard.html</code> in browser</p>
+</div>
+
+<!-- Slide 9: Limitations -->
+<div class="slide" data-slide="9">
+  <h2>Limitations & Future Work</h2>
+  <div class="two-col">
+    <div>
+      <h3>Limitations</h3>
+      <ul>
+        <li>Small dataset (87 images)</li>
+        <li>Low sticker recall</li>
+        <li>OCR sensitive to image quality</li>
+        <li>Dashboard not yet API-connected</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Future Work</h3>
+      <ul>
+        <li>Expand dataset to 500+ images</li>
+        <li>Deploy on edge devices (Jetson/Pi)</li>
+        <li>REST API for live dashboard</li>
+        <li>Integrate with campus access control</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 10: Thank You -->
+<div class="slide" data-slide="10">
+  <div class="emoji">🎓</div>
+  <h1>Thank You</h1>
+  <p class="subtitle">Questions?</p>
+  <p class="meta">
+    <strong>Aneeque Shahid</strong> — BNU Lahore<br>
+    GitHub: github.com/AneequeShahid/bnu-vehicle-detection-ai-project<br>
+    Dataset: universe.roboflow.com/samis-workspace-cisly/bnu-vehicle-detector
+  </p>
+</div>
+
+<div class="counter"><span id="current">1</span> / <span id="total">10</span></div>
+<div class="nav">
+  <button onclick="prev()">← Previous</button>
+  <button onclick="next()">Next →</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let idx = 0;
+  document.getElementById('total').textContent = slides.length;
+
+  function show(i) {
+    slides.forEach(s => s.classList.remove('active'));
+    idx = Math.max(0, Math.min(i, slides.length - 1));
+    slides[idx].classList.add('active');
+    document.getElementById('current').textContent = idx + 1;
+  }
+  function next() { show(idx + 1); }
+  function prev() { show(idx - 1); }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') next();
+    if (e.key === 'ArrowLeft') prev();
+  });
+</script>
+</body>
+</html>

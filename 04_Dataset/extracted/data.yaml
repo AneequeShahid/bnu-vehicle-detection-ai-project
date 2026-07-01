@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 2
+names: ['bnu_sticker', 'number_plate']
+
+roboflow:
+  workspace: samis-workspace-cisly
+  project: bnu-vehicle-detector
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/samis-workspace-cisly/bnu-vehicle-detector/dataset/1

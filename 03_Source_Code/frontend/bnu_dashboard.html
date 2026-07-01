@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BNU Vehicle Detection System</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0f1e;
+    --bg2: #0f1628;
+    --bg3: #151e35;
+    --border: #1e2d4a;
+    --green: #00d084;
+    --green-dim: #00d08420;
+    --red: #ff4757;
+    --red-dim: #ff475720;
+    --blue: #3d8ef8;
+    --blue-dim: #3d8ef820;
+    --gold: #f5a623;
+    --gold-dim: #f5a62320;
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --text-mid: #94a3b8;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Navbar */
+  .navbar {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .nav-logo {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #00d084, #3d8ef8);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .nav-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+
+  .nav-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  .nav-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--green-dim);
+    border: 1px solid var(--green);
+    border-radius: 100px;
+    padding: 6px 14px;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .status-text {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--green);
+    letter-spacing: 0.5px;
+  }
+
+  .nav-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  /* Layout */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    grid-template-rows: auto 1fr;
+    gap: 0;
+    height: calc(100vh - 60px);
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-item {
+    padding: 20px 28px;
+    border-right: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-item:last-child { border-right: none; }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .stat-change {
+    font-size: 10px;
+    margin-top: 4px;
+    font-weight: 600;
+  }
+
+  .stat-item::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+  }
+
+  .stat-item.green::after { background: var(--green); }
+  .stat-item.blue::after { background: var(--blue); }
+  .stat-item.gold::after { background: var(--gold); }
+  .stat-item.red::after { background: var(--red); }
+  .stat-item.purple::after { background: #a78bfa; }
+
+  /* Camera Feed */
+  .camera-section {
+    padding: 20px 24px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-title::before {
+    content: '';
+    width: 3px;
+    height: 14px;
+    background: var(--green);
+    border-radius: 2px;
+    display: block;
+  }
+
+  .camera-feed {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    aspect-ratio: 16/9;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .camera-grid {
+    position: absolute;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(61,142,248,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(61,142,248,0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .camera-corners {
+    position: absolute;
+    inset: 16px;
+    pointer-events: none;
+  }
+
+  .corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: var(--green);
+    border-style: solid;
+  }
+
+  .corner.tl { top: 0; left: 0; border-width: 2px 0 0 2px; }
+  .corner.tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
+  .corner.bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
+  .corner.br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
+  .camera-placeholder {
+    text-align: center;
+    z-index: 1;
+  }
+
+  .camera-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+  }
+
+  .camera-placeholder p {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+
+  /* Detection boxes simulation */
+  .detection-box {
+    position: absolute;
+    border: 2px solid;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    animation: detectPulse 3s infinite;
+  }
+
+  .detection-box.plate {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: var(--gold-dim);
+    bottom: 22%;
+    left: 35%;
+  }
+
+  .detection-box.sticker {
+    border-color: var(--green);
+    color: var(--green);
+    background: var(--green-dim);
+    top: 25%;
+    right: 22%;
+  }
+
+  @keyframes detectPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  .camera-overlay-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .cam-timestamp {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+  }
+
+  .cam-rec {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--red);
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .rec-dot {
+    width: 7px;
+    height: 7px;
+    background: var(--red);
+    border-radius: 50%;
+    animation: pulse 1s infinite;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+
+  .btn-primary {
+    background: var(--green);
+    color: #0a0f1e;
+  }
+
+  .btn-primary:hover { background: #00b872; }
+
+  .btn-secondary {
+    background: var(--bg3);
+    color: var(--text-mid);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
+
+  .btn-danger {
+    background: var(--red-dim);
+    color: var(--red);
+    border: 1px solid var(--red);
+  }
+
+  /* Detection result card */
+  .detection-result {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .result-item {
+    background: var(--bg2);
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid var(--border);
+  }
+
+  .result-item.bnu-yes {
+    border-color: var(--green);
+    background: var(--green-dim);
+  }
+
+  .result-item.bnu-no {
+    border-color: var(--red);
+    background: var(--red-dim);
+  }
+
+  .result-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .result-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .result-item.bnu-yes .result-value { color: var(--green); }
+  .result-item.bnu-no .result-value { color: var(--red); }
+
+  .result-conf {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* Right Panel — Logs */
+  .logs-section {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .logs-header {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .filter-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg3);
+    border-radius: 8px;
+    padding: 3px;
+  }
+
+  .filter-tab {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-dim);
+    transition: all 0.2s;
+    border: none;
+    background: none;
+  }
+
+  .filter-tab.active {
+    background: var(--bg2);
+    color: var(--text);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+
+  .logs-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+  }
+
+  .logs-list::-webkit-scrollbar { width: 4px; }
+  .logs-list::-webkit-scrollbar-track { background: transparent; }
+  .logs-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-entry {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 8px;
+    transition: border-color 0.2s;
+    cursor: pointer;
+  }
+
+  .log-entry:hover { border-color: var(--blue); }
+
+  .log-entry.bnu { border-left: 3px solid var(--green); }
+  .log-entry.not-bnu { border-left: 3px solid var(--red); }
+
+  .log-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .log-plate {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--bg2);
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+
+  .log-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 100px;
+    letter-spacing: 0.5px;
+  }
+
+  .log-badge.allow {
+    background: var(--green-dim);
+    color: var(--green);
+    border: 1px solid var(--green);
+  }
+
+  .log-badge.deny {
+    background: var(--red-dim);
+    color: var(--red);
+    border: 1px solid var(--red);
+  }
+
+  .log-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .log-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .log-conf {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .log-conf span {
+    color: var(--gold);
+    font-weight: 600;
+  }
+
+  /* Chart section */
+  .chart-section {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .mini-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 48px;
+    margin-top: 12px;
+  }
+
+  .chart-bar {
+    flex: 1;
+    border-radius: 3px 3px 0 0;
+    transition: opacity 0.2s;
+    cursor: pointer;
+  }
+
+  .chart-bar:hover { opacity: 0.7; }
+
+  .chart-bar.green { background: var(--green); }
+  .chart-bar.red { background: var(--red); }
+
+  /* Scan animation line */
+  .scan-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+    animation: scan 3s linear infinite;
+    z-index: 2;
+  }
+
+  @keyframes scan {
+    0% { top: 0; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  /* Confidence bar */
+  .conf-bar-wrap {
+    margin-top: 6px;
+  }
+
+  .conf-bar-bg {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .conf-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--green), var(--blue));
+  }
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+  <div class="nav-brand">
+    <div class="nav-logo">🚗</div>
+    <div>
+      <div class="nav-title">BNU Vehicle Detection System</div>
+      <div class="nav-sub">Gate Monitoring Dashboard</div>
+    </div>
+  </div>
+  <div class="nav-status">
+    <div class="status-dot"></div>
+    <span class="status-text">SYSTEM ACTIVE</span>
+  </div>
+  <div class="nav-time" id="clock">--:--:--</div>
+</div>
+
+<!-- Main Layout -->
+<div class="layout">
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-item green">
+      <div class="stat-value" style="color: var(--green)" id="totalCount">24</div>
+      <div class="stat-label">Total Vehicles</div>
+      <div class="stat-change" style="color: var(--green)">↑ Today</div>
+    </div>
+    <div class="stat-item blue">
+      <div class="stat-value" style="color: var(--blue)" id="bnuCount">18</div>
+      <div class="stat-label">BNU Vehicles</div>
+      <div class="stat-change" style="color: var(--blue)">75% of total</div>
+    </div>
+    <div class="stat-item red">
+      <div class="stat-value" style="color: var(--red)" id="nonBnuCount">6</div>
+      <div class="stat-label">Non-BNU</div>
+      <div class="stat-change" style="color: var(--red)">25% of total</div>
+    </div>
+    <div class="stat-item gold">
+      <div class="stat-value" style="color: var(--gold)">95.4%</div>
+      <div class="stat-label">Precision</div>
+      <div class="stat-change" style="color: var(--gold)">Model Accuracy</div>
+    </div>
+    <div class="stat-item purple">
+      <div class="stat-value" style="color: #a78bfa" id="lastTime">--:--</div>
+      <div class="stat-label">Last Detection</div>
+      <div class="stat-change" style="color: #a78bfa">Real-time</div>
+    </div>
+  </div>
+
+  <!-- Camera Feed -->
+  <div class="camera-section">
+    <div class="section-header">
+      <div class="section-title">Live Camera Feed</div>
+      <div class="controls">
+        <button class="btn btn-primary" onclick="simulateDetection()">▶ Simulate Detection</button>
+        <button class="btn btn-secondary">⚙ Settings</button>
+        <button class="btn btn-danger">⏹ Stop</button>
+      </div>
+    </div>
+
+    <!-- Camera -->
+    <div class="camera-feed" id="cameraFeed">
+      <div class="camera-grid"></div>
+      <div class="scan-line"></div>
+
+      <!-- Detection boxes -->
+      <div class="detection-box plate" id="plateBox" style="display:none">number_plate 0.91</div>
+      <div class="detection-box sticker" id="stickerBox" style="display:none">bnu_sticker 0.87</div>
+
+      <div class="camera-corners">
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+      </div>
+
+      <div class="camera-placeholder" id="cameraPlaceholder">
+        <div class="camera-icon">📷</div>
+        <p>Connect camera or click Simulate Detection</p>
+        <button class="btn btn-primary" onclick="simulateDetection()">▶ Start Demo</button>
+      </div>
+
+      <div class="camera-overlay-bottom">
+        <div class="cam-timestamp" id="camTime">2026-05-30 00:00:00</div>
+        <div class="cam-rec"><div class="rec-dot"></div>REC</div>
+      </div>
+    </div>
+
+    <!-- Detection Result -->
+    <div class="section-header">
+      <div class="section-title">Last Detection Result</div>
+    </div>
+
+    <div class="detection-result">
+      <div class="result-item" id="stickerResult">
+        <div class="result-label">BNU Sticker</div>
+        <div class="result-value" id="stickerVal">—</div>
+        <div class="result-conf" id="stickerConf">Awaiting detection...</div>
+        <div class="conf-bar-wrap">
+          <div class="conf-bar-bg"><div class="conf-bar-fill" id="stickerBar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="result-item" id="plateResult">
+        <div class="result-label">Number Plate</div>
+        <div class="result-value" id="plateVal">—</div>
+        <div class="result-conf" id="plateConf">Awaiting detection...</div>
+        <div class="conf-bar-wrap">
+          <div class="conf-bar-bg"><div class="conf-bar-fill" id="plateBar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="result-item" id="statusResult" style="grid-column: span 2;">
+        <div class="result-label">Vehicle Status</div>
+        <div class="result-value" id="statusVal">⏳ Waiting for vehicle...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logs Panel -->
+  <div class="logs-section">
+    <div class="logs-header">
+      <div class="section-title">Vehicle Logs</div>
+      <div class="filter-tabs">
+        <button class="filter-tab active" onclick="filterLogs('all', this)">All</button>
+        <button class="filter-tab" onclick="filterLogs('bnu', this)">BNU</button>
+        <button class="filter-tab" onclick="filterLogs('non', this)">Non-BNU</button>
+      </div>
+    </div>
+
+    <div class="logs-list" id="logsList"></div>
+
+    <!-- Mini Chart -->
+    <div class="chart-section">
+      <div class="section-title">Hourly Activity</div>
+      <div class="mini-chart" id="miniChart"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Sample data
+  const sampleLogs = [
+    { plate: 'LEB-3421', bnu: true, conf: 0.91, time: '16:34:08', sticker: true },
+    { plate: 'AUC-058', bnu: true, conf: 0.87, time: '16:31:22', sticker: true },
+    { plate: 'RHC-112', bnu: false, conf: 0.73, time: '16:28:45', sticker: false },
+    { plate: 'LEA-7734', bnu: true, conf: 0.94, time: '16:25:10', sticker: true },
+    { plate: 'NOT DETECTED', bnu: false, conf: 0.12, time: '16:22:33', sticker: false },
+    { plate: 'LZB-9901', bnu: true, conf: 0.88, time: '16:19:07', sticker: true },
+    { plate: 'RLZ-4422', bnu: false, conf: 0.66, time: '16:15:51', sticker: false },
+    { plate: 'AUB-2210', bnu: true, conf: 0.92, time: '16:12:30', sticker: true },
+    { plate: 'LEC-5577', bnu: true, conf: 0.85, time: '16:09:14', sticker: true },
+    { plate: 'KHI-3310', bnu: false, conf: 0.70, time: '16:05:42', sticker: false },
+  ];
+
+  const plates = ['LEB-3421', 'AUC-058', 'LEA-7734', 'LZB-9901', 'AUB-2210', 'RHC-112', 'KHI-4410', 'ISL-7721'];
+  let logs = [...sampleLogs];
+  let currentFilter = 'all';
+
+  // Clock
+  function updateClock() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-GB');
+    document.getElementById('clock').textContent = timeStr;
+    const dateStr = now.toLocaleDateString('en-GB').split('/').reverse().join('-');
+    document.getElementById('camTime').textContent = `${dateStr} ${timeStr}`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Render logs
+  function renderLogs() {
+    const list = document.getElementById('logsList');
+    const filtered = currentFilter === 'all' ? logs :
+                     currentFilter === 'bnu' ? logs.filter(l => l.bnu) :
+                     logs.filter(l => !l.bnu);
+    list.innerHTML = filtered.map(log => `
+      <div class="log-entry ${log.bnu ? 'bnu' : 'not-bnu'}">
+        <div class="log-top">
+          <div class="log-plate">${log.plate}</div>
+          <div class="log-badge ${log.bnu ? 'allow' : 'deny'}">${log.bnu ? '✅ ALLOW' : '❌ DENY'}</div>
+        </div>
+        <div class="log-bottom">
+          <div class="log-time">⏱ ${log.time}</div>
+          <div class="log-conf">Conf: <span>${(log.conf * 100).toFixed(0)}%</span></div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Filter
+  function filterLogs(type, btn) {
+    currentFilter = type;
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    renderLogs();
+  }
+
+  // Mini chart
+  function renderChart() {
+    const chart = document.getElementById('miniChart');
+    const heights = [20, 35, 45, 30, 60, 80, 95, 70, 55, 40, 30, 48];
+    chart.innerHTML = heights.map((h, i) =>
+      `<div class="chart-bar ${i % 3 === 0 ? 'red' : 'green'}" style="height:${h}%" title="Hour ${i+8}:00"></div>`
+    ).join('');
+  }
+
+  // Simulate detection
+  let detectionActive = false;
+  function simulateDetection() {
+    if (detectionActive) return;
+    detectionActive = true;
+
+    // Hide placeholder
+    document.getElementById('cameraPlaceholder').style.display = 'none';
+
+    // Show detection boxes
+    setTimeout(() => {
+      const isBNU = Math.random() > 0.3;
+      const plate = plates[Math.floor(Math.random() * plates.length)];
+      const conf = (0.7 + Math.random() * 0.25).toFixed(2);
+      const stickerConf = (0.75 + Math.random() * 0.2).toFixed(2);
+
+      if (isBNU) {
+        document.getElementById('stickerBox').style.display = 'block';
+        document.getElementById('stickerBox').textContent = `bnu_sticker ${stickerConf}`;
+      }
+      document.getElementById('plateBox').style.display = 'block';
+      document.getElementById('plateBox').textContent = `number_plate ${conf}`;
+
+      // Update result cards
+      const stickerResult = document.getElementById('stickerResult');
+      stickerResult.className = `result-item ${isBNU ? 'bnu-yes' : 'bnu-no'}`;
+      document.getElementById('stickerVal').textContent = isBNU ? '✅ DETECTED' : '❌ NOT FOUND';
+      document.getElementById('stickerConf').textContent = `Confidence: ${(stickerConf * 100).toFixed(0)}%`;
+      document.getElementById('stickerBar').style.width = `${stickerConf * 100}%`;
+
+      document.getElementById('plateVal').textContent = plate;
+      document.getElementById('plateConf').textContent = `Confidence: ${(conf * 100).toFixed(0)}%`;
+      document.getElementById('plateBar').style.width = `${conf * 100}%`;
+
+      const statusResult = document.getElementById('statusResult');
+      statusResult.className = `result-item ${isBNU ? 'bnu-yes' : 'bnu-no'}`;
+      document.getElementById('statusVal').textContent = isBNU ? '✅ BNU VEHICLE — ALLOW ENTRY' : '❌ NOT BNU — DENY ENTRY';
+
+      // Add to logs
+      const now = new Date().toLocaleTimeString('en-GB');
+      logs.unshift({ plate, bnu: isBNU, conf: parseFloat(conf), time: now, sticker: isBNU });
+
+      // Update stats
+      document.getElementById('totalCount').textContent = logs.length;
+      document.getElementById('bnuCount').textContent = logs.filter(l => l.bnu).length;
+      document.getElementById('nonBnuCount').textContent = logs.filter(l => !l.bnu).length;
+      document.getElementById('lastTime').textContent = now.slice(0,5);
+
+      renderLogs();
+
+      setTimeout(() => {
+        document.getElementById('stickerBox').style.display = 'none';
+        document.getElementById('plateBox').style.display = 'none';
+        detectionActive = false;
+      }, 3000);
+
+    }, 800);
+  }
+
+  // Init
+  renderLogs();
+  renderChart();
+</script>
+</body>
+</html>
